@@ -1,24 +1,27 @@
 {
-  "mission_name": "Simulated Long-Duration Mission — Demo",
-  "note": "All crew members, names, and telemetry in this file and in telemetry.csv are SIMULATED for prototype purposes. This is not real astronaut data.",
+  "mission_name": "Apollo 15",
+  "note": "Real historical crew. Roles and identities are public record (NASA, 1971) — not simulated.",
   "members": [
     {
-      "id": "CMD-01",
-      "name": "Cmdr. Amara Reyes",
-      "role": "Mission Commander",
-      "photo_initials": "AR"
+      "id": "CDR",
+      "name": "David R. Scott",
+      "role": "Commander",
+      "photo_initials": "DS",
+      "position_note": "Piloted the Lunar Module Falcon to landing; walked and drove the Lunar Roving Vehicle on all 3 EVAs."
     },
     {
-      "id": "FE-02",
-      "name": "Flt. Eng. Kenji Tanaka",
-      "role": "Flight Engineer",
-      "photo_initials": "KT"
+      "id": "CMP",
+      "name": "Alfred M. Worden",
+      "role": "Command Module Pilot",
+      "photo_initials": "AW",
+      "position_note": "Remained in lunar orbit aboard Command Module Endeavour operating the SIM bay instruments; performed the first deep-space EVA on the return trip."
     },
     {
-      "id": "MS-03",
-      "name": "Msn. Spec. Fatima Noor",
-      "role": "Mission Specialist",
-      "photo_initials": "FN"
+      "id": "LMP",
+      "name": "James B. Irwin",
+      "role": "Lunar Module Pilot",
+      "photo_initials": "JI",
+      "position_note": "Walked and drove the Lunar Roving Vehicle alongside Scott on all 3 EVAs; experienced a documented cardiac arrhythmia shortly after lunar liftoff."
     }
   ]
 }

@@ -145,7 +145,7 @@
 }
 
 .portal-card--astronaut .portal-card__tag { color: var(--status-nominal); }
-.portal-card--mission .portal-card__tag { color: var(--nasa-blue-bright); }
+.portal-card--mission .portal-card__tag { color: var(--accent-bright); }
 
 .about-strip {
   max-width: 1200px;
@@ -200,7 +200,7 @@
   left: 0; top: 0.55em;
   width: 6px; height: 6px;
   border-radius: 50%;
-  background: var(--nasa-blue-bright);
+  background: var(--accent-bright);
 }
 
 /* --------------------------------------------------------------------------
@@ -431,13 +431,13 @@
 .incoming-message {
   padding: 18px 20px;
   border-radius: var(--radius);
-  border: 1px solid var(--nasa-blue-bright);
+  border: 1px solid var(--accent-bright);
   background: linear-gradient(160deg, rgba(46,95,199,0.16), rgba(11,61,145,0.08));
 }
 .incoming-message__from {
   font-family: var(--font-mono);
   font-size: 0.74rem;
-  color: var(--nasa-blue-bright);
+  color: var(--accent-bright);
   letter-spacing: 0.02em;
 }
 .incoming-message__body { margin: 10px 0 16px; font-size: 0.95rem; color: var(--text); }

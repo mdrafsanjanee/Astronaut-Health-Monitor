@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Astronaut Health Monitor — NASA Space Apps 2026</title>
-<meta name="description" content="A monitoring and decision-support prototype for astronaut health and mission control, built for the NASA Space Apps Challenge 2026." />
+<title>Astronaut Health Monitor — Apollo 15 Replay | NASA Space Apps 2026</title>
+<meta name="description" content="A real-data astronaut health monitoring and mission-control prototype, replaying Apollo 15's actual biomedical record. Built for the NASA Space Apps Challenge 2026." />
 <link rel="stylesheet" href="assets/css/theme.css" />
 <link rel="stylesheet" href="assets/css/pages.css" />
 </head>
@@ -12,8 +12,8 @@
 
 <nav class="site-nav">
   <div class="site-nav__brand">
-    <span class="site-nav__mark">AHM</span>
-    <span>Astronaut Health Monitor</span>
+    <span class="site-nav__mark">A15</span>
+    <span>Apollo 15 Health Monitor</span>
   </div>
   <button class="site-nav__toggle" aria-label="Toggle menu">
     <span></span><span></span><span></span>
@@ -32,26 +32,27 @@
       <span class="dot dot--nominal"></span>
       NASA SPACE APPS 2026 — PRE-SCREENING PROTOTYPE
     </div>
-    <h1 class="hero__title">Health monitoring for astronauts on long-duration missions</h1>
+    <h1 class="hero__title">Replaying Apollo 15's real biomedical record</h1>
     <p class="hero__lede">
-      A working prototype that watches an astronaut's vitals, sleep, exercise,
-      wellbeing, and musculoskeletal risk alongside the spacecraft's
-      environment — detects concerning trends before they become
-      emergencies — and connects the crew to Mission Control with a clear
-      monitor → detect → explain → act → record workflow.
+      This isn't a fictional demo. Every event, timestamp, and cited figure
+      here is drawn from NASA's own Apollo 15 Mission Report — including
+      the real cardiac arrhythmia Lunar Module Pilot James Irwin experienced
+      after lunar liftoff, and Mission Control's real decision about it. It's
+      the mission that helped convince NASA it needed better astronaut
+      health monitoring in the first place.
     </p>
     <div class="hero__meta">
       <div class="hero__meta-item">
-        <span class="value mono">HTML · CSS · JS</span>
-        <span class="label">no framework, no build step</span>
+        <span class="value mono">295h 12m</span>
+        <span class="label">real mission duration (GET)</span>
       </div>
       <div class="hero__meta-item">
         <span class="value mono">3 crew</span>
-        <span class="label">simulated, 45-day demo mission</span>
+        <span class="label">Scott · Worden · Irwin</span>
       </div>
       <div class="hero__meta-item">
-        <span class="value mono">NASA-STD-3001</span>
-        <span class="label">sourced environmental &amp; health limits</span>
+        <span class="value mono">27 events</span>
+        <span class="label">cited to NASA's own mission report</span>
       </div>
     </div>
   </div>
@@ -59,20 +60,20 @@
 
 <section class="portals">
   <div class="portals__heading">
-    <h2>Two interfaces, one workflow</h2>
-    <p>Open both in separate tabs to see an alert travel from the crew to the ground and back.</p>
+    <h2>Two interfaces, one real mission</h2>
+    <p>Press Simulate to replay Apollo 15 hour by hour, or jump straight to the cardiac event.</p>
   </div>
   <div class="portal-grid">
     <a class="portal-card portal-card--astronaut" href="console.html#astronaut">
-      <div class="portal-card__tag">01 — ON ORBIT</div>
+      <div class="portal-card__tag">01 — ON THE MOON</div>
       <h3>Astronaut Interface</h3>
-      <p>Personal dashboard: vitals, sleep &amp; recovery, exercise, a daily wellbeing check-in, musculoskeletal risk, and any recommendation sent down from the ground.</p>
+      <p>Real heart-rate and respiration telemetry, the mission timeline as it actually happened, and postflight findings (bone density, radiation dose, weight loss) revealed after splashdown.</p>
       <span class="portal-card__cta">Open dashboard →</span>
     </a>
     <a class="portal-card portal-card--mission" href="console.html#mission-control">
-      <div class="portal-card__tag">02 — ON THE GROUND</div>
+      <div class="portal-card__tag">02 — HOUSTON</div>
       <h3>Mission Control</h3>
-      <p>Crew roster, environment &amp; life-support status, the active alert feed, and a composer for sending recommendations back to the crew.</p>
+      <p>Crew status for all three astronauts, the real historical decisions Mission Control made, and an interactive composer to demo how a live recommendation-and-acknowledge workflow would work today.</p>
       <span class="portal-card__cta">Open console →</span>
     </a>
   </div>
@@ -89,28 +90,31 @@
       <span class="step">RECORD</span>
     </div>
     <p style="margin-top:16px;">
-      All telemetry in this prototype is <strong>simulated</strong> — generated
-      from published NASA research and standards, not real flight data. Every
-      threshold the alert engine uses is defined in
-      <code class="mono">data/nasa-references.json</code> and cited below, so
-      it's clear which numbers come from an official NASA standard and which
-      are general reference values chosen for the demo.
+      Apollo 15's own history walks through every step of this loop for real:
+      Irwin's EKG showed an abnormal rhythm (<strong>monitor</strong>), flight
+      surgeon Dr. Charles Berry recognized it as serious
+      (<strong>detect</strong>), leadership weighed what it meant for the
+      mission (<strong>explain</strong>), Mission Control made a real call
+      about what to do — and what to tell the crew
+      (<strong>act</strong>) — and it's still documented and studied today
+      (<strong>record</strong>). Two corrections worth knowing before you
+      dig in are in the README's "Corrections" section.
     </p>
   </div>
   <div>
     <h2>Primary data sources</h2>
     <ul class="source-list">
-      <li>NASA-STD-3001, Volume 1 &amp; Volume 2 (Space Flight Human System Standard) — habitable atmosphere, exercise, and health-monitoring requirements.</li>
-      <li>NASA OCHMO Technical Briefs — OCHMO-TB-002 (ECLSS), OCHMO-TB-003 (Habitable Atmosphere), OCHMO-TB-004 (Carbon Dioxide), OCHMO-TB-030 (Bone Loss).</li>
-      <li>Barger LK, et al. "Prevalence of sleep deficiency and use of hypnotic drugs in astronauts before, during, and after spaceflight." <em>Lancet Neurology</em>, 2014.</li>
-      <li>Smith SM, et al. bone-loss &amp; exercise-compliance findings, ISS 2006-2009, and NASA/TM-2018-219938 on modeled bone mineral density change.</li>
-      <li>Ploutz-Snyder L. "An Evidence-Based Approach to Exercise Prescriptions on ISS," NASA Johnson Space Center.</li>
+      <li>Apollo 15 Mission Report (MSC-07230), NASA, 1971 — Section 10, Biomedical Evaluation.</li>
+      <li>Apollo 15 Activities Timeline, Table 4-I — second-accurate EVA and liftoff timestamps (an.rsl.wustl.edu).</li>
+      <li>Wikipedia, "Return of Apollo 15 to Earth" — the cardiac-event narrative and Mission Control's decision, cross-checked against flight directors' published memoirs.</li>
+      <li>Delp MD, et al., arXiv:2208.00892 — the specific PVC count and GET for Irwin's arrhythmia.</li>
+      <li>NASA SP-368, <em>Biomedical Results of Apollo</em> — Environmental Control System design (cabin atmosphere, CO2 removal).</li>
     </ul>
   </div>
 </section>
 
 <footer class="site-footer">
-  Astronaut Health Monitor — a NASA Space Apps Challenge 2026 prototype. All telemetry is simulated. See README.md for full source citations and limitations.
+  Apollo 15 Health Monitor Replay — a NASA Space Apps Challenge 2026 prototype. Real mission data, clearly separated from the interactive demo layer. See README.md for full citations, corrections, and the production-version roadmap.
 </footer>
 
 <script src="assets/js/common.js"></script>

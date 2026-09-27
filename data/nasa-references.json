@@ -1,109 +1,55 @@
 {
-  "_readme": "Thresholds below are CONFIGURABLE reference points used by this prototype's alert engine. Where a value is defined by an official NASA standard, the citation says so explicitly. Where NASA does not publish a specific numeric requirement (e.g. exact vitals cutoffs), the citation says the value is a general clinical / operational reference used for demo purposes, not an official NASA number. Do not present anything in this file as a certified flight requirement.",
+  "_readme": "Reference facts for the Apollo 15 simulator. Split into two groups: FLOWN_HARDWARE (what Apollo 15 actually used in 1971 — cited to the Apollo 15 Mission Report and contemporaneous NASA engineering documents) and MODERN_COMPARISON (today's ISS-era NASA-STD-3001 standards, shown only for contrast — they did not exist in 1971 and never governed this mission). An earlier version of this file applied modern ISS thresholds (cabin CO2/O2/pressure limits, a daily exercise-compliance regimen) directly to Apollo hardware; that was a mismatch and has been corrected here — see README 'Corrections' section.",
 
-  "vitals": {
-    "heart_rate_bpm": {
-      "nominal": [50, 90],
-      "attention": [90, 100],
-      "critical_above": 100,
-      "critical_below": 45,
-      "source": "General clinical resting heart-rate reference range (not NASA-specific). Individual astronaut baselines vary; this prototype also compares against each crew member's own 7-day baseline."
+  "flown_hardware": {
+    "cabin_atmosphere": {
+      "value": "100% oxygen, nominal 5.0 psia (34.5 kPa); emergency floor 3.5 psia (24.1 kPa)",
+      "note": "Apollo CM and LM both used a pure-oxygen, low-pressure cabin — not the nitrogen/oxygen mix and ~14.7 psia used on the ISS today. Launch-day atmosphere was a mixed sea-level-pressure gas, bled down to 5 psia pure O2 during ascent/early translunar coast (a post-Apollo-1 safety change).",
+      "source": "Biomedical Results of Apollo (NASA SP-368), Ch. \"Command and Service Module Environmental Control System\"; NASA feature '50th Anniversary of NASA Deciding on a Mixed-Gas Atmosphere for Apollo'"
     },
-    "respiration_rate": {
-      "nominal": [12, 20],
-      "attention": [20, 24],
-      "critical_above": 24,
-      "critical_below": 10,
-      "source": "General clinical respiration-rate reference range (not NASA-specific)."
+    "co2_removal": {
+      "value": "Lithium hydroxide (LiOH) canisters, no automated ppCO2 alarm threshold used in this app",
+      "note": "Apollo used disposable LiOH canisters, not the ISS's regenerable CDRA system. No continuous cabin-CO2 telemetry for Apollo 15 was located in the sources used to build this prototype, so this app does not chart a CO2 trend for this mission — it states the real removal method as context instead of inventing numbers.",
+      "source": "General Apollo ECS documentation (NASA SP-368); this app does not extend beyond what was sourced"
     },
-    "spo2_pct": {
-      "nominal_min": 95,
-      "attention_min": 90,
-      "critical_below": 90,
-      "source": "General clinical SpO2 reference range (not NASA-specific)."
+    "biosensors": {
+      "value": "ECG (heart rate) and impedance pneumogram (respiration rate) only",
+      "note": "No pulse oximetry (SpO2) and no continuous skin-temperature telemetry existed in the 1971 bioharness — both are anachronistic for this mission and were removed from this app's Vitals panel accordingly.",
+      "source": "Apollo 15 Mission Report, Section 10.1 (Biomedical Instrumentation and Physiological Data)"
     },
-    "skin_temp_c": {
-      "nominal": [36.1, 37.2],
-      "attention": [37.2, 38.0],
-      "critical_above": 38.0,
-      "critical_below": 36.0,
-      "source": "General clinical body-temperature reference range (not NASA-specific)."
+    "food": {
+      "value": "~2,800 kcal/day planned; actual average intake 2,801 (CDR) / 2,372 (CMP) / 2,568 (LMP) kcal/day",
+      "source": "Apollo 15 Mission Report, Section 10.2.7 (Food)"
+    },
+    "radiation": {
+      "value": "Net integrated dose 360 millirad (CDR), 510 millirad (LMP); passive dosimeter average 300 millirad at skin depth — well below thresholds for detectable medical effect",
+      "source": "Apollo 15 Mission Report, Section 10.2.4 (Radiation)"
+    },
+    "bone_mineral": {
+      "value": "Measured ~4% loss in radius bone mineral content, attributable to weightlessness; both crewmen back to baseline within 2 weeks postflight",
+      "note": "This is a real measured result from the M-078 experiment (pre/post-flight X-ray densitometry), not a continuous in-flight measurement or a model — Apollo 15 was 12.3 days, too short and not instrumented for in-flight bone-loss tracking the way long-duration ISS missions are.",
+      "source": "Apollo 15 Mission Report, Section 10.4 (Bone Mineral Measurement)"
+    },
+    "exercise_countermeasures": {
+      "value": "None flown as a daily countermeasure regimen",
+      "note": "The ISS's ~2.5h/day, 6-days/week aerobic + resistance exercise protocol is a post-Apollo (Skylab-onward) countermeasure developed once missions got long enough for cardiovascular/musculoskeletal deconditioning to matter. Applying it to a 12-day Apollo mission would be anachronistic, so this app's Activity panel tracks real EVA metabolic workload instead of an exercise-compliance percentage.",
+      "source": "General spaceflight-medicine literature (Ploutz-Snyder, NASA JSC ISS exercise Rx); absence for Apollo confirmed by the lack of any such program in the Apollo 15 Mission Report"
     }
   },
 
-  "sleep": {
-    "scheduled_hr": 8.5,
-    "attention_trailing3_below": 7.0,
-    "critical_trailing3_below": 6.0,
-    "source": "NASA schedules 8.5 h of sleep per night in flight, but the largest study of spaceflight sleep found crews average only ~5.96 h (Shuttle) and ~6.09 h (ISS) per night. (Barger LK, et al. 'Prevalence of sleep deficiency and use of hypnotic drugs in astronauts before, during, and after spaceflight.' Lancet Neurology, 2014;13:904-912.) This prototype flags a trailing 3-day average below 7.0 h as ATTENTION and below 6.0 h as CRITICAL, i.e. at/below the historical spaceflight average."
+  "vitals_general_reference": {
+    "heart_rate_bpm": { "nominal": [50, 100], "note": "General clinical resting range, era-independent. EVA-period elevation above this range is expected exertion, not an alert — see 'eva_context' below." },
+    "respiration_rate": { "nominal": [12, 20], "note": "General clinical range, era-independent." },
+    "source": "General clinical reference ranges, not mission- or era-specific."
   },
 
-  "exercise": {
-    "prescribed_minutes_per_day": 150,
-    "prescribed_days_per_week": 6,
-    "attention_compliance_pct": 90,
-    "critical_compliance_pct": 70,
-    "critical_sustained_days": 5,
-    "source": "ISS crews are prescribed about 2.5 h/day of aerobic + resistance exercise, 6 days/week, as a countermeasure to cardiovascular and musculoskeletal deconditioning (Ploutz-Snyder L., 'An Evidence-Based Approach to Exercise Prescriptions on ISS,' NASA JSC; Smith SM, et al., J Bone Miner Res, 2012)."
-  },
+  "eva_context_rule": "A heart-rate or respiration reading during a logged EVA window is not flagged, however high, because elevated rate from physical exertion during a moonwalk is expected and healthy — the real 1971 concern was Irwin's EKG RHYTHM (paired beats with pauses), not his rate, which is why this app treats the cardiac arrhythmia as a distinct scripted medical event rather than something a simple rate threshold could have caught. A rate-only monitor would have missed exactly the thing that mattered — see README.",
 
-  "wellbeing_1_5": {
-    "attention_at_or_below": 3,
-    "critical_at_or_below": 2,
-    "persistent_decline_days": 3,
-    "source": "Simple 1-5 daily self-assessment scale defined for this prototype (mood, stress, fatigue, motivation, social wellbeing), per the challenge brief. Not a clinical or diagnostic instrument."
-  },
-
-  "musculoskeletal": {
-    "bone_loss_pct_per_month_range": [0.4, 2.7],
-    "bone_loss_pct_per_month_typical": 1.0,
-    "attention_cumulative_loss_pct": 3.0,
-    "critical_cumulative_loss_pct": 6.0,
-    "source": "Weight-bearing bone sites lose an estimated 0.4-2.7% BMD per month in microgravity absent effective countermeasures; recovery after return can take a year or more and is not always complete (Sibonga JD, et al.; Lang T, et al.; cited in NASA/TM-2018-219938). Long-duration ISS/Mir crews without adequate resistance exercise have shown >10% loss at some skeletal sites (Shackelford LC, et al.). Adequately varied, high-compliance resistance exercise combined with proper nutrition has been shown to preserve BMD and bone mass in most regions (Smith SM, et al., 2012). This prototype computes a MODELED, NOT MEASURED, cumulative loss estimate from mission duration and each crew member's average resistance-exercise compliance — it is not a substitute for real bone densitometry."
-  },
-
-  "environment": {
-    "co2_mmhg": {
-      "nominal_below": 2.5,
-      "attention": [2.5, 4.0],
-      "critical_above": 4.0,
-      "source": "NASA-STD-3001 Vol 2 Rev D [V2 6004] limits the average 1-hour cabin CO2 partial pressure (ppCO2) to no more than 3.0 mmHg, chosen to keep headache incidence below ~1.4%. Historically, ISS has operated in the 1-9 mmHg range with typical operations nearer 4.0 mmHg using CDRA; reported symptoms (headache, fatigue, malaise) increase between 2.8-4.5 mmHg and further above 4.5 mmHg. (OCHMO Technical Brief OCHMO-TB-004, 'Carbon Dioxide.')"
-    },
-    "o2_pp_mmhg": {
-      "nominal": [145, 155],
-      "attention": [[140, 145], [155, 160]],
-      "critical_below": 140,
-      "critical_above": 160,
-      "source": "NASA-STD-3001 Vol 2 [V2 6003] defines a 145-155 mmHg O2 partial-pressure normoxia target range for crew exposure. (OCHMO Technical Brief OCHMO-TB-002, 'Environmental Control & Life Support System.')"
-    },
-    "cabin_pressure_psia": {
-      "nominal": [14.2, 14.9],
-      "attention": [[13.0, 14.2], [14.9, 15.0]],
-      "critical_below": 13.0,
-      "critical_above": 15.0,
-      "source": "NASA-STD-3001 Vol 2 [V2 6006/HS3004] sets a nominal indefinite-exposure total-pressure tolerance band of 7.5-15.0 psia for vehicle operations, with typical shirtsleeve operations nearer 14.7 psia. This prototype uses a narrower comfort/nominal band inside that certified envelope and flags approach toward its edges."
-    },
-    "cabin_temp_c": {
-      "nominal": [20, 24],
-      "attention": [[18, 20], [24, 27]],
-      "critical_below": 18,
-      "critical_above": 27,
-      "source": "NASA-STD-3001 requires the cabin atmosphere be maintained between 18-27 degC (64.4-80.6 degF) during nominal flight operations. (NASA Human Integration Design Handbook / NASA-STD-3001 Vol 2.)"
-    },
-    "humidity_pct": {
-      "nominal": [40, 60],
-      "attention": [[25, 40], [60, 75]],
-      "critical_below": 25,
-      "critical_above": 75,
-      "source": "NASA-STD-3001 Vol 2 specifies an allowable relative-humidity range of roughly 25-75%, with 40-60% preferred for comfort. (OCHMO Technical Brief OCHMO-TB-002 / OCHMO-TB-003.)"
-    }
-  },
-
-  "resources": {
-    "food_kcal_per_day": 3035,
-    "water_l_per_person_per_day": 2.5,
-    "attention_days_remaining": 14,
-    "critical_days_remaining": 7,
-    "source": "NASA-STD-3001 Vol 2 references an average dietary intake near 3,035 kcal/day per crewmember [V2 7003] and a minimum potable water allowance of 2.5 L/day per crewmember [V2 6109]. Remaining-days thresholds (14-day ATTENTION / 7-day CRITICAL buffer) are an operational planning heuristic defined for this prototype, not an official NASA requirement."
+  "modern_comparison": {
+    "_readme": "For contrast only — none of the following governed Apollo 15. Included so the app can show how far astronaut health monitoring has moved on since 1971.",
+    "cabin_atmosphere_iss": "NASA-STD-3001 Vol 2 [V2 6003, V2 6006]: ~14.2-14.9 psia total pressure, 145-155 mmHg O2 partial pressure, two-gas (N2/O2) mix.",
+    "co2_limit_iss": "NASA-STD-3001 Vol 2 [V2 6004]: average 1-hour ppCO2 <= 3.0 mmHg; OCHMO-TB-004.",
+    "exercise_iss": "~2.5 h/day, 6 days/week aerobic + resistance exercise (Ploutz-Snyder, ISS ExRx; Smith SM et al., 2012).",
+    "sleep_iss": "Scheduled 8.5 h/night; observed spaceflight average ~5.96-6.09 h (Barger LK et al., Lancet Neurology, 2014) — notably, sleep deprivation was already a real problem in 1971 on Apollo 15, as this mission's own sleep-displacement data shows."
   }
 }

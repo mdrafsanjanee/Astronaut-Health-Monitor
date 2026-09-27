@@ -1,13 +1,20 @@
 {
-  "mission_id": "DEMO-1",
-  "mission_title": "Astronaut Health Monitor — Demo Mission",
-  "mission_day_range": [1, 45],
-  "baseline_window_days": [1, 7],
+  "mission_id": "APOLLO-15",
+  "mission_title": "Apollo 15 — Hadley-Apennine",
+  "note": "Real mission. GET (Ground Elapsed Time) is hours:minutes since liftoff, the actual NASA convention used throughout the Apollo program.",
+  "launch": "1971-07-26T13:34:00Z",
+  "splashdown": "1971-08-07T20:45:53Z",
+  "total_get_hours": 295.198,
   "crew_size": 3,
-  "notes": [
-    "This mission timeline is SIMULATED for the NASA Space Apps Challenge prototype.",
-    "Mission days 1-7 are used as each crew member's personal baseline window.",
-    "Around mission day 19-33, Cmdr. Reyes's telemetry is scripted to show a gradual, multi-parameter decline (sleep, exercise compliance, resting heart rate, fatigue) for demonstration purposes, followed by a recovery trend after a simulated Mission Control intervention.",
-    "Cabin CO2 is scripted to drift upward through the same window, crossing the NASA-STD-3001 average 1-hour limit, then recover."
+  "facts": [
+    "Fourth crewed Moon landing; first of the 3 extended-duration \"J-missions\".",
+    "First mission to carry the Lunar Roving Vehicle — 27.9 km (17.3 mi) driven across 3 EVAs.",
+    "Landing site: Hadley-Apennine, at the edge of the Apennine mountain front beside Hadley Rille.",
+    "12 days, 7 hours, 11 minutes, 53 seconds — the longest Apollo mission flown.",
+    "One of the mission's 3 main parachutes only partially inflated at splashdown; the Command Module landed safely on the remaining two."
+  ],
+  "sources": [
+    "NASA, \"Apollo 15 Mission Details\" (nasa.gov/mission_pages/apollo/missions/apollo15.html)",
+    "Wikipedia, \"Apollo 15\" (infobox facts cross-checked against NASA sources)"
   ]
 }

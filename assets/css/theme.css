@@ -6,28 +6,30 @@
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
 
 :root {
-  /* Surfaces */
-  --bg: #05070d;
-  --bg-hero: radial-gradient(ellipse 120% 80% at 50% -20%, #0b1530 0%, #05070d 55%);
-  --panel: #10141f;
-  --panel-alt: #161c2b;
-  --panel-raised: #1b2233;
-  --border: #232b3d;
-  --border-soft: #1a2032;
+  /* Surfaces — warm near-black, not cold blue-black */
+  --bg: #0a0a0d;
+  --bg-hero: radial-gradient(ellipse 120% 80% at 50% -20%, #1a1530 0%, #0a0a0d 55%);
+  --panel: #131319;
+  --panel-alt: #191a22;
+  --panel-raised: #20212b;
+  --border: #292a37;
+  --border-soft: #1c1d26;
 
   /* Text */
-  --text: #e7ecf5;
-  --text-dim: #8a93a8;
-  --text-faint: #5c6478;
+  --text: #f0eee8;
+  --text-dim: #9a97a8;
+  --text-faint: #67647a;
 
-  /* Brand — drawn from the NASA insignia palette */
-  --nasa-blue: #0b3d91;
-  --nasa-blue-bright: #2e5fc7;
-  --nasa-red: #fc3d21;
+  /* Brand accent — violet primary (interactive chrome), gold secondary
+     (marks real, cited historical data points throughout the app) */
+  --accent: #8b7ff0;
+  --accent-bright: #a99bff;
+  --gold: #d9ae5c;
+  --gold-dim: #3a2f18;
 
   /* Status system (used everywhere: dashboards, alerts, badges) */
-  --status-nominal: #39c2c9;
-  --status-nominal-dim: #163338;
+  --status-nominal: #43d1b0;
+  --status-nominal-dim: #163332;
   --status-attention: #f2a93b;
   --status-attention-dim: #3a2c11;
   --status-critical: #fc3d21;
@@ -113,7 +115,7 @@ button, select, input {
   border-radius: 8px;
   display: grid;
   place-items: center;
-  background: linear-gradient(155deg, var(--nasa-blue-bright), var(--nasa-blue));
+  background: linear-gradient(155deg, var(--accent-bright), var(--accent));
   font-family: var(--font-mono);
   font-size: 0.7rem;
   font-weight: 600;
@@ -258,10 +260,10 @@ button, select, input {
 }
 
 .btn--primary {
-  background: var(--nasa-blue);
-  border-color: var(--nasa-blue-bright);
+  background: var(--accent);
+  border-color: var(--accent-bright);
 }
-.btn--primary:hover { background: var(--nasa-blue-bright); }
+.btn--primary:hover { background: var(--accent-bright); }
 
 .btn--danger {
   background: var(--status-critical-dim);
@@ -290,4 +292,146 @@ button, select, input {
 
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
+}
+
+/* --------------------------------------------------------------------------
+   Simulation control bar (shared across both views)
+   -------------------------------------------------------------------------- */
+
+.sim-bar {
+  position: sticky;
+  top: var(--nav-height);
+  z-index: 90;
+  background: rgba(19, 19, 25, 0.92);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.sim-bar__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 10px 28px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.sim-bar__get {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.sim-bar__get .label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  letter-spacing: 0.05em;
+}
+.sim-bar__get .value {
+  font-family: var(--font-mono);
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--gold);
+}
+.sim-bar__get .sublabel {
+  font-size: 0.76rem;
+  color: var(--text-faint);
+}
+
+.sim-bar__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sim-bar__jump {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+.sim-bar__jump .label {
+  font-size: 0.78rem;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+.btn--icon {
+  padding: 8px 12px;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+}
+
+@media (max-width: 760px) {
+  .sim-bar__inner { gap: 12px; }
+  .sim-bar__jump { margin-left: 0; width: 100%; }
+  .sim-bar__jump select { flex: 1; }
+}
+
+/* --------------------------------------------------------------------------
+   Real-event timeline (astronaut view "Mission Timeline" card)
+   -------------------------------------------------------------------------- */
+
+.event-timeline {
+  display: grid;
+  gap: 10px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.event-item {
+  display: flex;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  background: var(--panel-alt);
+}
+
+.event-item__get {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--gold);
+  white-space: nowrap;
+  min-width: 4.5em;
+}
+
+.event-item__body { flex: 1; }
+.event-item__title { font-size: 0.9rem; font-weight: 500; }
+.event-item__detail { font-size: 0.82rem; color: var(--text-dim); margin-top: 4px; }
+.event-item__source { font-size: 0.72rem; color: var(--text-faint); margin-top: 6px; font-style: italic; }
+
+.event-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.event-tag--milestone { background: var(--panel-raised); color: var(--text-dim); }
+.event-tag--eva { background: var(--gold-dim); color: var(--gold); }
+.event-tag--medical { background: var(--status-critical-dim); color: var(--status-critical); }
+.event-tag--mission-control-decision { background: var(--status-attention-dim); color: var(--status-attention); }
+.event-tag--sleep { background: var(--panel-raised); color: var(--accent-bright); }
+.event-tag--postflight { background: var(--status-nominal-dim); color: var(--status-nominal); }
+.event-tag--demo { background: var(--panel-raised); color: var(--accent-bright); }
+
+.chart-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 0.72rem;
+  color: var(--text-faint);
+  margin-top: 6px;
+  flex-wrap: wrap;
+}
+.chart-legend .swatch {
+  display: inline-block;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  margin-right: 5px;
+  vertical-align: middle;
 }

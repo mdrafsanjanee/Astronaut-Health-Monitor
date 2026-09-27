@@ -1,11 +1,13 @@
-# Astronaut Health Monitor
+# Apollo 15 Astronaut Health Monitor — Real-Data Replay
 
 A working prototype built for the **NASA Space Apps Challenge 2026** challenge
 *"Create Health Monitoring Software for Astronauts on Space Missions."*
 
-It monitors a simulated crew's vitals, sleep, exercise, wellbeing, and
-musculoskeletal risk, alongside the spacecraft's environment — detects
-concerning trends — and connects the crew to Mission Control:
+This version replays **Apollo 15's real 1971 biomedical record** — not a
+fictional scenario. Every event, timestamp, and cited figure comes from
+NASA's own Apollo 15 Mission Report and related public sources. Where the
+app fills a gap the public record doesn't cover, it says so, in the UI,
+every time.
 
 ```
 MONITOR → DETECT → EXPLAIN → ACT → RECORD
@@ -16,214 +18,256 @@ MONITOR → DETECT → EXPLAIN → ACT → RECORD
 **Just open `index.html` in a browser.** No build step, no install, no
 server required. Plain HTML, CSS, and vanilla JavaScript throughout.
 
-From there, click through to **Astronaut Interface** or **Mission
-Control** — both live inside `console.html` as two switchable views (a
-nav click swaps panels instantly, no page reload). See
-[Why one console page, not two](#why-one-console-page-not-two) for why
-that's a deliberate choice, not a shortcut.
+From the landing page, open **Astronaut Interface** or **Mission
+Control** — both live inside `console.html` as switchable views sharing
+one script (see "Why one console page, not two" further down).
 
-## Demonstrating the scenario
+## Controls
 
-The bundled 45-day simulated mission (`data/telemetry.csv`) is scripted so
-the alert engine has something real to catch:
+- **Simulate** — press to auto-advance Ground Elapsed Time (GET) at
+  roughly 1 mission day per 3 seconds. Press again to pause.
+- **−6h / +6h** — step manually.
+- **⟲** — reset to launch (GET 0:00).
+- **Jump to** — a dropdown of all 27 real mission events; pick one to
+  go straight there (e.g. "GET 178:00 — Cardiac arrhythmia detected").
+- The **GET readout** at the top is the flight-hour counter, in the
+  same Ground-Elapsed-Time format NASA itself used in 1971.
 
-1. Open **Mission Control**. Drag the **Mission Day** slider to around
-   **day 25–33**. Watch Cmdr. Reyes's status flip to `ATTENTION` and then
-   `CRITICAL` as her sleep, exercise compliance, fatigue, and resting heart
-   rate decline together — the banner explains this as a *multi-parameter*
-   alert, not a single bad reading. Cabin CO2 also crosses into `CRITICAL`
-   around the same window.
-2. Click Cmdr. Reyes's card to see her detail panel, then look at **Active
-   Alerts** for the full list.
-3. In the **Send Recommendation** panel, pick a template (or write your
-   own) and click **Send to astronaut**.
-4. Switch to the **Astronaut Interface** view, select **Cmdr. Amara
-   Reyes**, and set the same Mission Day. A message banner from Mission
-   Control appears immediately — click **Acknowledge**.
-5. Check **History** on either view: alert generated → recommendation
-   sent → astronaut acknowledged, all timestamped.
-6. Drag the slider on to **day 40–45** to see the scripted recovery.
+## The real story this replays
 
-Msn. Spec. Fatima Noor has a second, independent decline in the same
-window — a good way to demo that Mission Control is monitoring the whole
-crew, not just one person, and has to triage between them.
+Minutes after Lunar Module Pilot James Irwin lifted off the Moon (GET
+171:37), ground-based flight surgeons watched his EKG telemetry
+develop a **bigeminy rhythm** — paired heartbeats with pauses between
+them, five premature ventricular contractions in 30 seconds. NASA's
+chief flight surgeon, Dr. Charles Berry, called it serious enough that
+on Earth, he'd have put Irwin in an ICU. Mission leadership chose not
+to tell Commander Scott, reasoning Irwin was already about as
+monitored as he could be. Before the crew's next sleep period, Deke
+Slayton radioed up a recommendation to take a sedative; the crew
+declined, and finally slept 3.5 hours late after roughly 22 hours
+awake. Irwin's rhythm was back to normal by splashdown. He suffered
+his first heart attack a few months later, and died of one in 1991 —
+the first of the twelve Apollo moonwalkers to die.
 
-You can also use the **Wellbeing Check-In** sliders on the Astronaut
-Interface to submit a live self-assessment and watch the alert engine
-react immediately.
+This mission is a big part of *why* NASA started taking in-flight
+astronaut health monitoring seriously — which makes it a fitting real
+case study for this challenge, not just a dramatic one.
+
+**Demo path:** open Mission Control, use **Jump to** → "Cardiac
+arrhythmia detected (Irwin)", watch his status flip to CRITICAL, then
+switch to the Astronaut Interface and select James Irwin to see the
+same event on his Mission Timeline card, with its sources cited.
+
+## What's real, what's filled in, and how you can tell
+
+Every screen makes this distinction visible, not just this README:
+
+- **Real, cited events** — all 27 entries in `data/events.json` (EVA
+  start/end times accurate to the second, the cardiac event, Mission
+  Control's real decisions, real medication use, real postflight
+  findings). Each carries a `source` field shown in the UI.
+- **Real, cited biomedical figures** — heart-rate averages/ranges by
+  mission phase, food intake, radiation dose, bone-density loss, body
+  weight loss — all from Section 10 of the Apollo 15 Mission Report.
+  On the heart-rate chart these render as solid gold dots; hover one
+  to see its citation.
+- **Interpolated** — the smooth line connecting those real points on
+  the vitals chart. The report gives period averages, not a
+  minute-by-minute trace, so this line is drawn for readability, not
+  presented as measured data. Tagged `interpolated` in
+  `data/telemetry.csv`.
+- **Estimated** — values with no real reported figure at all (e.g.
+  Worden's heart rate — the sources used here don't publish his,
+  unlike Scott's and Irwin's) get a plausible, clearly-labeled
+  placeholder rather than an invented "reported" number.
+- **Interactive demo** — the Wellbeing Check-In slider and the Send
+  Recommendation / Acknowledge workflow. Apollo crews didn't fill out
+  a daily wellbeing survey (that's a modern, ISS-era practice), and
+  nothing in this box is claimed to have happened in 1971 — it's
+  there to demo how the same alert engine would react to that kind of
+  input in a modern, real-time version. Every entry it creates is
+  tagged `DEMO` in Mission History, right next to the real record.
+
+## Corrections made from the previous (fictional) version
+
+Building this on real data surfaced two mismatches worth stating
+plainly, since getting them wrong would have meant presenting
+1990s/2000s-era ISS engineering as if it were 1971 Apollo hardware:
+
+1. **Cabin atmosphere.** Apollo's Command and Lunar Modules ran
+   **100% oxygen at ~5.0 psia** (with a 3.5 psia emergency floor) —
+   not the mixed-gas, ~14.7 psia atmosphere used on the ISS today.
+   The old NASA-STD-3001 thresholds (a modern standard, decades
+   after Apollo) have been removed from this build's environment
+   panel and replaced with the real, cited Apollo figures. See
+   `data/nasa-references.json` → `flown_hardware.cabin_atmosphere`.
+2. **No daily exercise regimen, no pulse oximetry.** The ISS's
+   ~2.5h/day exercise countermeasure is a post-Apollo (Skylab-onward)
+   practice, and pulse oximetry wasn't part of the 1971 bioharness —
+   it measured only ECG (heart rate) and an impedance pneumogram
+   (respiration). Both the fabricated "exercise compliance %" panel
+   and the SpO2 tile have been removed; the Vitals panel now shows
+   only what Apollo 15 actually measured.
+
+The full, still-useful ISS-era numbers are kept in
+`data/nasa-references.json` under `modern_comparison`, purely so the
+app (and this README) can show how far things have moved on since
+1971 — not as something that governed this mission.
+
+## About the color palette
+
+The brief asked for this build's palette to match mdrafsanjanee.tech's
+dark mode. I wasn't able to actually pull the site's real color values —
+I have no way to read a live page's CSS/assets in this environment, only
+its text content, and I couldn't locate a public source repository for
+it either. What's here (a warm near-black background with a violet
+accent for interactive elements and a gold accent that specifically
+marks real historical data points) is my own attempt at something in
+that "modern dark portfolio" spirit rather than an extraction. If you
+can share the actual hex values or a screenshot, I can match it exactly.
 
 ## Why one console page, not two
 
-The challenge brief describes two interfaces — astronaut and Mission
-Control — and it's tempting to build them as two separate HTML files
-(`astronaut.html`, `mission-control.html`) that "talk" to each other so
-they can be demoed as if from two different locations. An earlier version
-of this project did exactly that, using `localStorage` +
-`BroadcastChannel` for the two files to sync.
-
-That turned out to be unreliable specifically *because* the brief asks
-for a zero-server, `file://`-opened prototype: per MDN, localStorage
-behavior for `file://` documents is explicitly **undefined and varies by
-browser**, and modern Firefox (92+) gives every `file://` path its own
-storage origin by default — meaning two separate local files do **not**
-reliably share `localStorage`, so a two-file version can silently fail to
-sync depending on which browser a judge happens to open it in.
-
-If you deploy this on a real static file server later (see [Future
-enhancements](#future-enhancements)), splitting the two views back into
-separate pages — or wiring up real cross-device communication — becomes
-straightforward without touching the alert engine at all.
+Both views live in **one HTML document** (`console.html`) as two panels
+toggled by JavaScript, rather than as two separate `astronaut.html` /
+`mission-control.html` files. This is because `localStorage` sharing
+between two different `file://` documents is explicitly undefined
+behavior (per MDN) and, in current Firefox, is off by default — a
+two-file version could silently fail to sync depending on the browser a
+judge happens to open it in. One document means both views share the
+exact same in-memory event log by direct reference, which always works,
+in any browser, with no server. `localStorage` is still used, but only
+to persist your demo log across an ordinary reload of that *same*
+document.
 
 ## Project structure
 
 ```
 Astronaut-Health-Monitor/
 ├── index.html                Landing page — links into console.html
-├── console.html               Astronaut view + Mission Control view
-│                               (switchable panels, one shared script)
+├── console.html               Astronaut view + Mission Control view,
+│                               the shared GET simulation bar
 │
 ├── assets/
 │   ├── css/
-│   │   ├── theme.css         Design tokens, nav, shared components
+│   │   ├── theme.css         Design tokens, nav, sim bar, shared components
 │   │   └── pages.css         Landing hero + dashboard layouts
 │   └── js/
-│       ├── common.js         CSV parsing, trend math, alert engine, event log
-│       ├── charts.js         Tiny dependency-free SVG sparkline renderer
-│       └── app.js            View switching + both dashboards' rendering
+│       ├── common.js         CSV parsing, GET helpers, the event-driven
+│       │                     status model, the interactive demo log
+│       ├── charts.js         Dependency-free SVG chart (marks real vs.
+│       │                     interpolated points, shades real EVA windows)
+│       └── app.js            View switching, simulation controls, both
+│                             dashboards' rendering
 │
 ├── data/
-│   ├── telemetry.csv          SIMULATED daily crew + environment readings
-│   ├── crew.json              Crew roster
-│   ├── mission.json           Mission metadata (day range, baseline window)
-│   ├── nasa-references.json   Every threshold used by the alert engine, cited
-│   └── data.js                AUTO-GENERATED embed of the four files above
-│                               (see tools/build_data_js.py — this is what
-│                               lets the app run via file:// with no server)
+│   ├── telemetry.csv          Hourly HR/respiration, each row tagged
+│   │                          reported / estimated / interpolated
+│   ├── events.json            The 27 real, cited mission events
+│   ├── crew.json               Real crew: Scott, Worden, Irwin
+│   ├── mission.json            Real mission metadata (GET range, dates)
+│   ├── nasa-references.json    Flown-hardware facts (cited) + a
+│   │                           modern-ISS comparison section
+│   └── data.js                 AUTO-GENERATED embed of the four files
+│                                above (see tools/build_data_js.py — this
+│                                is what lets the app run via file://
+│                                with no server)
 │
 ├── tools/
-│   ├── generate_telemetry.py  Regenerates telemetry.csv (edit + re-run to
-│   │                          change the simulated scenario)
+│   ├── generate_telemetry.py  Regenerates telemetry.csv from the real
+│   │                          anchor points (edit ANCHORS to adjust)
 │   └── build_data_js.py       Regenerates data/data.js from the CSV/JSON
 │
 └── README.md
 ```
 
-**If you edit `data/telemetry.csv`, `crew.json`, `mission.json`, or
-`nasa-references.json` by hand,** re-run `python3 tools/build_data_js.py`
-from the `tools/` folder afterward so `data.js` picks up your changes —
-the app reads `data.js`, not the CSV/JSON directly, for the file:// reason
-explained above.
+**If you edit any `data/*.json` or `data/telemetry.csv` by hand,**
+re-run `python3 tools/build_data_js.py` from the `tools/` folder
+afterward so `data.js` picks up your changes.
 
-## What's simulated vs. what's real
+## Primary data sources
 
-**Simulated:** every number in `data/telemetry.csv` — heart rate,
-respiration, SpO2, skin temperature, sleep, exercise minutes, wellbeing
-scores, and cabin environment readings for a fictional 3-person crew and
-45-day mission. None of it is real astronaut telemetry.
+- Apollo 15 Mission Report (MSC-07230), NASA, 1971 — Section 10,
+  Biomedical Evaluation (heart-rate ranges/averages, sleep displacement,
+  food intake, medications, bone mineral measurement, radiation dose,
+  physical exams).
+- Apollo 15 Activities Timeline, Table 4-I, via
+  an.rsl.wustl.edu/apollo/data/A15/pages/time — second-accurate EVA and
+  liftoff GET timestamps.
+- Wikipedia, "Return of Apollo 15 to Earth" — the cardiac-event
+  narrative and Mission Control's real decision, cross-referenced
+  against published flight-director memoirs (Kraft, Kranz).
+- Delp MD, et al., arXiv:2208.00892 — the specific PVC count and GET
+  window for Irwin's arrhythmia.
+- KUOW "Primed" podcast, season 3 episode 4 — Dr. Charles Berry's
+  quoted assessment of Irwin's condition.
+- NASA SP-368, *Biomedical Results of Apollo* — Command/Service Module
+  Environmental Control System design (cabin atmosphere, CO2 removal).
+- NASA, "Apollo 15 Mission Details" (nasa.gov) and Wikipedia's Apollo 15
+  infobox — mission-level facts (launch/splashdown times, EVA counts).
 
-**Real and cited:** the thresholds the alert engine uses to judge those
-numbers, wherever an authoritative NASA source publishes one. See
-`data/nasa-references.json` for the full, structured list with citations
-attached to every value. In short:
-
-| Parameter | Reference value | Source |
-|---|---|---|
-| Cabin CO2 (ppCO2) | ≤ 3.0 mmHg average 1-hr limit; historical ISS operating range 1–9 mmHg, typically ~4.0 mmHg | NASA-STD-3001 Vol 2 [V2 6004]; OCHMO-TB-004 |
-| O2 partial pressure | 145–155 mmHg normoxia target | NASA-STD-3001 Vol 2 [V2 6003]; OCHMO-TB-002 |
-| Cabin total pressure | 7.5–15.0 psia certified tolerance band | NASA-STD-3001 Vol 2 [V2 6006 / HS3004] |
-| Cabin temperature | 18–27 °C nominal range | NASA-STD-3001 Vol 2; NASA Human Integration Design Handbook |
-| Relative humidity | ~25–75%, 40–60% preferred | NASA-STD-3001 Vol 2; OCHMO-TB-002/003 |
-| Food | ~3,035 kcal/day average | NASA-STD-3001 Vol 2 [V2 7003] |
-| Water | ≥ 2.5 L/day/crewmember minimum | NASA-STD-3001 Vol 2 [V2 6109] |
-| Sleep | Scheduled 8.5 h/night; observed spaceflight average ~5.96–6.09 h | Barger LK, et al., *Lancet Neurology*, 2014 |
-| Exercise | ~2.5 h/day, 6 days/week (aerobic + resistance) | Ploutz-Snyder L., NASA JSC ISS exercise Rx; Smith SM, et al., 2012 |
-| Bone mineral density | 0.4–2.7%/month loss at weight-bearing sites absent countermeasures, mitigated by resistance-exercise compliance | Smith SM, et al., 2012; NASA/TM-2018-219938; Shackelford LC, et al. |
-
-Vitals reference ranges (resting heart rate, respiration rate, SpO2,
-skin temperature) are **general clinical reference ranges, not
-NASA-specific numbers** — this is stated explicitly in
-`nasa-references.json`, since NASA does not publish a single universal
-numeric cutoff for these that's appropriate to reproduce here. The
-prototype also compares each crew member against their own personal
-baseline (mission days 1–7), not just a population range.
-
-The **musculoskeletal / bone-loss indicator is a modeled estimate**, built
-from mission duration and each crew member's average resistance-exercise
-compliance, using the published monthly loss-rate range above. It is
-**not a measurement** and the UI says so.
+All of the above are publicly available NASA or otherwise-public
+sources. Nothing in `data/events.json` or the "reported" rows of
+`telemetry.csv` is invented — anything this app had to fill in to make
+a continuous simulation possible is labeled `estimated` or
+`interpolated`, never presented as a measured figure.
 
 ## Design notes
 
 - No frameworks, no build step, no database, no authentication — plain
   HTML/CSS/JS and CSV/JSON, per the challenge's technology constraints.
-- Trend detection uses only simple, explainable methods: trailing moving
-  averages, percent-change from a personal baseline, basic least-squares
-  linear trend/slope, consecutive-abnormal-day counts, and a linear
-  threshold-crossing projection for CO2. No machine learning.
-- All thresholds live in one JSON file (`data/nasa-references.json`) so
-  they're easy to find, cite, and adjust — nothing is hard-coded into the
-  alert logic itself.
-- UI/CSS follows a dark, mission-control-inspired look built around the
-  NASA insignia palette (NASA blue `#0b3d91`, NASA red `#fc3d21`) with a
-  cyan/amber/red status system for NOMINAL/ATTENTION/CRITICAL.
+- The status model is **event-driven**, not a bank of numeric
+  thresholds — see the design note at the top of `common.js` for why
+  that's a more honest fit for real 1971 data (and a deliberate
+  teaching point: a simple heart-rate threshold would have missed the
+  one real cardiac event on this mission entirely, because it was a
+  rhythm problem, not a rate problem).
+- UI follows a dark, mission-control-inspired look (see "About the
+  color palette" above for an honest note on its sourcing).
 
-## Development priority (what's implemented)
+## Production-version roadmap (not built here — pre-screening only)
 
-1. ✅ Basic astronaut dashboard
-2. ✅ Simulated CSV telemetry (45 days × 3 crew)
-3. ✅ Health/environment calculations
-4. ✅ Trend detection (moving average, slope, baseline delta, projection)
-5. ✅ Alerts (single-parameter, multi-parameter, environmental)
-6. ✅ History/log (shared, cross-tab)
-7. ✅ Mission Control dashboard
-8. ✅ Mission Control → astronaut notification
-9. ✅ Astronaut acknowledgement
-10. 🔄 Polish UI and presentation — functional and demo-ready; see below
-    for ideas if you have more time before the deadline.
+This build is a historical replay, deliberately scoped for the
+pre-screening round. A production version, built after this stage,
+would need to become a **live, general-purpose** system rather than a
+replay of one mission — here's the architecture that implies, so it's
+on record before we build it:
 
-## Future enhancements (not needed for the MVP)
+- **Real-time data ingestion.** Replace `data/telemetry.csv` with a
+  live ingestion layer reading from real biosensor APIs — e.g. the
+  Astroskin wearable system NASA has already flight-tested in HERA
+  analog missions (ECG, respiration, blood pressure, sleep, activity),
+  or equivalent ISS/Artemis telemetry feeds. `common.js`'s assessment
+  functions already take rows of `{get_hours, heart_rate_bpm,
+  respiration_rate}` as plain data — swapping a CSV for a streamed API
+  response is a data-layer change, not a rewrite of the alert logic.
+- **Per-individual baselining.** Judge alerts against each astronaut's
+  own personal baseline and medical history, not just general clinical
+  ranges — the event-driven model here (nominal-unless-a-real-event-says-
+  otherwise) would extend to include a rolling personal-baseline
+  comparison once continuous real vitals exist to baseline against.
+- **Rhythm-level analysis, not just rate.** Irwin's event is the case
+  for this: production monitoring needs real waveform/rhythm analysis
+  (arrhythmia detection), not heart-rate thresholds alone.
+- **Multi-user, role-based access.** Concurrent accounts for every
+  crew member plus one or more Mission Control operator roles, with
+  the shared event log (already the architecture here — see "Why one
+  console page, not two") moved from in-page memory to a real backend
+  (database + authenticated API) so it works across devices, not just
+  within one open browser tab.
+- **A real device/EVA context feed**, replacing the hardcoded
+  `EVA_WINDOWS` list in `common.js` with live telemetry from suit
+  systems or activity logs, so "is this person currently exerting
+  themselves" is sensed, not scripted.
 
-- A small Node.js/WebSocket server for real cross-device (not just
-  cross-tab) Mission Control ↔ astronaut communication.
-- Per-parameter historical detail pages with longer date ranges and CSV
-  export.
-- A settings page to adjust thresholds in the browser instead of editing
-  `nasa-references.json` by hand.
-- Real NASA OSDR dataset integration for a non-fictional case study
-  alongside the simulated demo mission.
-- Accessibility pass with a screen-reader user (current build: visible
-  focus states, `prefers-reduced-motion` respected, semantic table
-  markup for history/log).
-
-## Sources consulted
-
-- NASA-STD-3001, *Space Flight Human System Standard*, Volumes 1 & 2.
-- NASA Office of the Chief Health & Medical Officer (OCHMO) Technical
-  Briefs: OCHMO-TB-002 (ECLSS), OCHMO-TB-003 (Habitable Atmosphere),
-  OCHMO-TB-004 (Carbon Dioxide), OCHMO-TB-030 (Bone Loss).
-- Barger LK, Flynn-Evans EE, Kubey A, Walsh L, Ronda JM, Wang W, Wright
-  KP, Czeisler CA. "Prevalence of sleep deficiency and use of hypnotic
-  drugs in astronauts before, during, and after spaceflight." *Lancet
-  Neurology*, 2014;13:904–912.
-- Smith SM, et al. Bone/exercise-compliance findings from ISS missions
-  2006–2009; NASA/TM-2018-219938 (modeled BMD change, 0.4–2.7%/month).
-- Shackelford LC, et al., bone densitometry findings, Mir/ISS
-  long-duration crews.
-- Ploutz-Snyder L. "An Evidence-Based Approach to Exercise Prescriptions
-  on ISS," NASA Johnson Space Center / Universities Space Research
-  Association.
-- NASA Human Integration Design Handbook (companion to NASA-STD-3001).
-
-All of the above are publicly available NASA or peer-reviewed sources.
-No NASA requirement is invented in this project — where a number isn't
-backed by one of these, it's labeled as a general/demo reference value
-in `data/nasa-references.json`.
+None of this is implemented in the pre-screening build — it's
+documented here so the team has a clear, reviewed starting point for
+the next round rather than reinventing the architecture from scratch.
 
 ## Important note
 
 This is a **decision-support and monitoring prototype**, not an
 autonomous medical diagnostic system. It does not diagnose disease,
-prescribe medication, or give medical instructions. Every recommendation
-Mission Control can send is operational/recovery-oriented (review
-recovery schedule, review exercise compliance, notify the flight
-surgeon, etc.) and is designed to prompt human review, not replace it.
+prescribe medication, or give medical instructions. Every real Mission
+Control decision shown here is presented as historical record, cited to
+its source — never as something the interactive demo layer generated.

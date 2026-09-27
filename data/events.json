@@ -1,0 +1,247 @@
+[
+  {
+    "get_hours": 0.0,
+    "category": "milestone",
+    "title": "Launch",
+    "detail": "Apollo 15 lifts off from Kennedy Space Center, Launch Complex 39A, on a Saturn V (SA-510).",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "NASA, Apollo 15 Mission Details (nasa.gov/mission_pages/apollo/missions/apollo15.html)"
+  },
+  {
+    "get_hours": 104.708,
+    "category": "milestone",
+    "title": "Lunar landing",
+    "detail": "Lunar Module Falcon (Scott, Irwin) lands at Hadley-Apennine, GET 104:42:29.",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I, via an.rsl.wustl.edu/apollo/data/A15/pages/time"
+  },
+  {
+    "get_hours": 106.713,
+    "category": "eva",
+    "title": "Stand-up EVA begins",
+    "detail": "Scott performs a stand-up EVA through the LM's top hatch, photographing the landing site (GET 106:42:49–107:15:56).",
+    "crew_id": "CDR",
+    "precision": "exact",
+    "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
+  },
+  {
+    "get_hours": 107.5,
+    "category": "sleep",
+    "title": "1st lunar-surface sleep period",
+    "detail": "Scheduled sleep cycle shifted about 2 hours versus Earth-normal timing — the smallest of the mission's three lunar-surface sleep displacements.",
+    "crew_id": null,
+    "precision": "approximate",
+    "source": "Apollo 15 Mission Report, Section 10.2.3 (Sleep)"
+  },
+  {
+    "get_hours": 119.655,
+    "category": "eva",
+    "title": "EVA-1 begins",
+    "detail": "LM depressurized, GET 119:39:17. First use of the Lunar Roving Vehicle in history.",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
+  },
+  {
+    "get_hours": 126.200,
+    "category": "eva",
+    "title": "EVA-1 ends",
+    "detail": "LM repressurized, GET 126:11:59. Duration 6h 32m 42s. Average heart rate: Scott 92 bpm, Irwin 125 bpm.",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "Apollo 15 Mission Report, Section 10 (Biomedical Evaluation); an.rsl.wustl.edu timeline"
+  },
+  {
+    "get_hours": 130.0,
+    "category": "sleep",
+    "title": "2nd lunar-surface sleep period",
+    "detail": "Sleep cycle shifted about 2 hours. Crew went to sleep an hour later than planned and had to wake an hour early to fix a cabin oxygen leak.",
+    "crew_id": null,
+    "precision": "approximate",
+    "source": "Apollo 15 Mission Report, Section 10.2.3 (Sleep)"
+  },
+  {
+    "get_hours": 142.247,
+    "category": "eva",
+    "title": "EVA-2 begins",
+    "detail": "LM depressurized, GET 142:14:48.",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
+  },
+  {
+    "get_hours": 149.450,
+    "category": "eva",
+    "title": "EVA-2 ends",
+    "detail": "LM repressurized, GET 149:27:02. Duration 7h 12m 14s. Average heart rate: Scott 84 bpm, Irwin 107 bpm.",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "Apollo 15 Mission Report, Section 10; an.rsl.wustl.edu timeline"
+  },
+  {
+    "get_hours": 150.0,
+    "category": "medical",
+    "title": "Commander takes aspirin for shoulder pain",
+    "detail": "Scott develops pain in his right shoulder after a difficult deep-core-tube drilling operation during surface work. He takes aspirin for relief — 14 tablets total across the mission, the only medication either surface crewman used.",
+    "crew_id": "CDR",
+    "precision": "approximate",
+    "source": "Apollo 15 Mission Report, Section 10.2.2 (Medications)"
+  },
+  {
+    "get_hours": 155.0,
+    "category": "sleep",
+    "title": "3rd lunar-surface sleep period",
+    "detail": "The largest displacement of the mission — about 7 hours versus Earth-normal timing. The period was shortened from a planned 7 hours to 6.5 hours to make time for EVA-3 preparations.",
+    "crew_id": null,
+    "precision": "approximate",
+    "source": "Apollo 15 Mission Report, Section 10.2.3 (Sleep)"
+  },
+  {
+    "get_hours": 163.304,
+    "category": "eva",
+    "title": "EVA-3 begins",
+    "detail": "LM depressurized, GET 163:18:14.",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
+  },
+  {
+    "get_hours": 168.134,
+    "category": "eva",
+    "title": "EVA-3 ends",
+    "detail": "LM repressurized, GET 168:08:04. Duration 4h 49m 50s. Average heart rate: Scott 85 bpm, Irwin 105 bpm.",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "Apollo 15 Mission Report, Section 10; an.rsl.wustl.edu timeline"
+  },
+  {
+    "get_hours": 171.623,
+    "category": "milestone",
+    "title": "Lunar liftoff",
+    "detail": "Falcon's ascent stage lifts off the Moon, GET 171:37:23, after 66h 55m on the surface.",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
+  },
+  {
+    "get_hours": 173.6,
+    "category": "milestone",
+    "title": "Docking with Endeavour",
+    "detail": "Falcon docks with Command Module Endeavour, reuniting the crew with Worden in lunar orbit.",
+    "crew_id": null,
+    "precision": "approximate",
+    "source": "Estimated from standard Apollo rendezvous timelines; exact docking GET not in the sources used here"
+  },
+  {
+    "get_hours": 178.0,
+    "category": "medical",
+    "title": "Cardiac arrhythmia detected (Irwin)",
+    "severity": "CRITICAL",
+    "detail": "Flight surgeons on the ground observe a bigeminy rhythm — paired heartbeats with pauses — on Irwin's EKG telemetry: 5 premature ventricular contractions (PVCs) in 30 seconds. Likely cause: potassium loss (hypokalemia) from mission stress and workload.",
+    "crew_id": "LMP",
+    "precision": "approximate",
+    "source": "Delp/arXiv:2208.00892 (citing flight data); Wikipedia \"Return of Apollo 15 to Earth\"; KUOW \"Primed\" (Dr. Charles Berry quote)"
+  },
+  {
+    "get_hours": 178.5,
+    "category": "mission-control-decision",
+    "title": "Flight Directors decide not to inform Commander Scott",
+    "severity": "ATTENTION",
+    "detail": "NASA's chief flight surgeon, Dr. Charles Berry, calls Irwin's EKG \"a serious situation\" — the kind he'd put in an ICU on Earth. Flight leadership (Kraft, Kranz) choose not to tell Scott, reasoning Irwin is already effectively monitored, on pure oxygen, in zero-g. The crew is not told during the mission.",
+    "crew_id": "LMP",
+    "precision": "approximate",
+    "source": "Wikipedia \"Return of Apollo 15 to Earth\"; collectSPACE forum discussion citing Kraft's and Kranz's memoirs; KUOW \"Primed\" podcast"
+  },
+  {
+    "get_hours": 179.5,
+    "category": "mission-control-decision",
+    "title": "Deke Slayton recommends a sedative",
+    "detail": "Before the crew's next sleep period, Slayton radios up a recommendation to take a Seconal sedative. The crew declines. They finally get to sleep 3.5 hours later than planned, after roughly 22 hours awake.",
+    "crew_id": null,
+    "precision": "approximate",
+    "source": "Wikipedia \"Return of Apollo 15 to Earth\""
+  },
+  {
+    "get_hours": 181.494,
+    "category": "milestone",
+    "title": "Lunar Module impact",
+    "detail": "The jettisoned Falcon ascent stage is deliberately crashed into the Moon, GET 181:29:37, registering on the seismometers left at the ALSEP site.",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
+  },
+  {
+    "get_hours": 223.8,
+    "category": "milestone",
+    "title": "Transearth injection",
+    "detail": "A propulsion burn departs lunar orbit and begins the trip home.",
+    "crew_id": null,
+    "precision": "approximate",
+    "source": "Wikipedia \"Apollo 15\" infobox (orbital departure timestamp, converted to GET)"
+  },
+  {
+    "get_hours": 241.0,
+    "category": "eva",
+    "title": "Worden's deep-space EVA",
+    "detail": "Alfred Worden leaves the Command Module to retrieve film cassettes from the SIM bay — the first deep-space EVA in history, roughly 320,000 km from Earth. Completed in about 18 minutes.",
+    "crew_id": "CMP",
+    "precision": "approximate",
+    "source": "NASA, Apollo 15 Mission Details"
+  },
+  {
+    "get_hours": 293.0,
+    "category": "medical",
+    "title": "Command Module Pilot uses nose drops",
+    "detail": "Worden uses nose drops shortly before Earth entry to help prevent middle-ear blockage during descent.",
+    "crew_id": "CMP",
+    "precision": "approximate",
+    "source": "Apollo 15 Mission Report, Section 10.2.2 (Medications)"
+  },
+  {
+    "get_hours": 295.198,
+    "category": "milestone",
+    "title": "Splashdown",
+    "detail": "Apollo 15 splashes down in the North Pacific, recovered by USS Okinawa. One of three main parachutes only partially inflated; the crew lands safely.",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "Wikipedia \"Apollo 15\" infobox; NASA mission summary"
+  },
+  {
+    "get_hours": 295.3,
+    "category": "postflight",
+    "title": "Postflight physical exam: crew in good health",
+    "detail": "A comprehensive physical exam shortly after landing found the crew in good health. Body weight losses: Scott 2.75 lb, Worden 3 lb, Irwin 5.5 lb. All three had minor skin irritation at biosensor sites, resolved without treatment within 48 hours.",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "Apollo 15 Mission Report, Section 10.3 (Physical Examinations)"
+  },
+  {
+    "get_hours": 295.4,
+    "category": "postflight",
+    "title": "Bone mineral measurement (M-078 experiment)",
+    "detail": "Measured, not modeled: radius bone mineral content showed about a 4% loss attributable to weightlessness. The Commander regained baseline bone mineral faster than the Command Module Pilot; both were back to baseline within 2 weeks.",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "Apollo 15 Mission Report, Section 10.4 (Bone Mineral Measurement)"
+  },
+  {
+    "get_hours": 295.5,
+    "category": "postflight",
+    "title": "Radiation dosimetry",
+    "detail": "Personal dosimeters read 360 millirad (Scott) and 510 millirad (Irwin) net integrated dose; passive dosimeters worn by all three crew averaged 300 millirad at skin depth — well below thresholds for detectable medical effect.",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "Apollo 15 Mission Report, Section 10.2.4 (Radiation)"
+  },
+  {
+    "get_hours": 295.6,
+    "category": "postflight",
+    "title": "Return-to-baseline cardiovascular fitness",
+    "detail": "Post-flight bicycle-ergometer and lower-body-negative-pressure tests took about a week per crewman to return to preflight baseline — longer than on earlier missions. Both surface crewmen showed a cardiovascular response at higher heart-rate levels not seen on previous flights.",
+    "crew_id": null,
+    "precision": "exact",
+    "source": "Apollo 15 Mission Report, Section 10.3 (Physical Examinations)"
+  }
+]
