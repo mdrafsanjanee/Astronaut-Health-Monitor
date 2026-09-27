@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Astronaut Health Monitor — NASA Space Apps 2026</title>
+<meta name="description" content="A monitoring and decision-support prototype for astronaut health and mission control, built for the NASA Space Apps Challenge 2026." />
+<link rel="stylesheet" href="assets/css/theme.css" />
+<link rel="stylesheet" href="assets/css/pages.css" />
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="site-nav__brand">
+    <span class="site-nav__mark">AHM</span>
+    <span>Astronaut Health Monitor</span>
+  </div>
+  <button class="site-nav__toggle" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="site-nav__links">
+    <a href="index.html" data-page="home" aria-current="page">Overview</a>
+    <a href="console.html#astronaut" data-page="astronaut">Astronaut Interface</a>
+    <a href="console.html#mission-control" data-page="mission-control">Mission Control</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="hero__stars"></div>
+  <div class="hero__inner">
+    <div class="hero__eyebrow">
+      <span class="dot dot--nominal"></span>
+      NASA SPACE APPS 2026 — PRE-SCREENING PROTOTYPE
+    </div>
+    <h1 class="hero__title">Health monitoring for astronauts on long-duration missions</h1>
+    <p class="hero__lede">
+      A working prototype that watches an astronaut's vitals, sleep, exercise,
+      wellbeing, and musculoskeletal risk alongside the spacecraft's
+      environment — detects concerning trends before they become
+      emergencies — and connects the crew to Mission Control with a clear
+      monitor → detect → explain → act → record workflow.
+    </p>
+    <div class="hero__meta">
+      <div class="hero__meta-item">
+        <span class="value mono">HTML · CSS · JS</span>
+        <span class="label">no framework, no build step</span>
+      </div>
+      <div class="hero__meta-item">
+        <span class="value mono">3 crew</span>
+        <span class="label">simulated, 45-day demo mission</span>
+      </div>
+      <div class="hero__meta-item">
+        <span class="value mono">NASA-STD-3001</span>
+        <span class="label">sourced environmental &amp; health limits</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section class="portals">
+  <div class="portals__heading">
+    <h2>Two interfaces, one workflow</h2>
+    <p>Open both in separate tabs to see an alert travel from the crew to the ground and back.</p>
+  </div>
+  <div class="portal-grid">
+    <a class="portal-card portal-card--astronaut" href="console.html#astronaut">
+      <div class="portal-card__tag">01 — ON ORBIT</div>
+      <h3>Astronaut Interface</h3>
+      <p>Personal dashboard: vitals, sleep &amp; recovery, exercise, a daily wellbeing check-in, musculoskeletal risk, and any recommendation sent down from the ground.</p>
+      <span class="portal-card__cta">Open dashboard →</span>
+    </a>
+    <a class="portal-card portal-card--mission" href="console.html#mission-control">
+      <div class="portal-card__tag">02 — ON THE GROUND</div>
+      <h3>Mission Control</h3>
+      <p>Crew roster, environment &amp; life-support status, the active alert feed, and a composer for sending recommendations back to the crew.</p>
+      <span class="portal-card__cta">Open console →</span>
+    </a>
+  </div>
+</section>
+
+<section class="about-strip">
+  <div>
+    <h2>The workflow</h2>
+    <div class="workflow">
+      <span class="step">MONITOR</span><span class="arrow">→</span>
+      <span class="step">DETECT</span><span class="arrow">→</span>
+      <span class="step">EXPLAIN</span><span class="arrow">→</span>
+      <span class="step">ACT</span><span class="arrow">→</span>
+      <span class="step">RECORD</span>
+    </div>
+    <p style="margin-top:16px;">
+      All telemetry in this prototype is <strong>simulated</strong> — generated
+      from published NASA research and standards, not real flight data. Every
+      threshold the alert engine uses is defined in
+      <code class="mono">data/nasa-references.json</code> and cited below, so
+      it's clear which numbers come from an official NASA standard and which
+      are general reference values chosen for the demo.
+    </p>
+  </div>
+  <div>
+    <h2>Primary data sources</h2>
+    <ul class="source-list">
+      <li>NASA-STD-3001, Volume 1 &amp; Volume 2 (Space Flight Human System Standard) — habitable atmosphere, exercise, and health-monitoring requirements.</li>
+      <li>NASA OCHMO Technical Briefs — OCHMO-TB-002 (ECLSS), OCHMO-TB-003 (Habitable Atmosphere), OCHMO-TB-004 (Carbon Dioxide), OCHMO-TB-030 (Bone Loss).</li>
+      <li>Barger LK, et al. "Prevalence of sleep deficiency and use of hypnotic drugs in astronauts before, during, and after spaceflight." <em>Lancet Neurology</em>, 2014.</li>
+      <li>Smith SM, et al. bone-loss &amp; exercise-compliance findings, ISS 2006-2009, and NASA/TM-2018-219938 on modeled bone mineral density change.</li>
+      <li>Ploutz-Snyder L. "An Evidence-Based Approach to Exercise Prescriptions on ISS," NASA Johnson Space Center.</li>
+    </ul>
+  </div>
+</section>
+
+<footer class="site-footer">
+  Astronaut Health Monitor — a NASA Space Apps Challenge 2026 prototype. All telemetry is simulated. See README.md for full source citations and limitations.
+</footer>
+
+<script src="assets/js/common.js"></script>
+<script>
+  AHM.initNav('home');
+</script>
+</body>
+</html>

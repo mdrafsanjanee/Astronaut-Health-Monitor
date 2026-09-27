@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Astronaut Health Monitor — Console</title>
+<link rel="stylesheet" href="assets/css/theme.css" />
+<link rel="stylesheet" href="assets/css/pages.css" />
+<style>
+  .app-view { display: none; }
+  .app-view.is-active { display: block; }
+</style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="site-nav__brand">
+    <span class="site-nav__mark">AHM</span>
+    <span>Astronaut Health Monitor</span>
+  </div>
+  <button class="site-nav__toggle" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="site-nav__links">
+    <a href="index.html" data-page="home">Overview</a>
+    <a href="#astronaut" data-page="astronaut" data-view="astronaut">Astronaut Interface</a>
+    <a href="#mission-control" data-page="mission-control" data-view="mission-control">Mission Control</a>
+  </div>
+</nav>
+
+<!-- ==================================================================
+     ASTRONAUT VIEW
+     ================================================================== -->
+<div id="view-astronaut" class="app-view">
+
+  <header class="dash-header">
+    <div class="dash-titlebar">
+      <div>
+        <h1 id="a-title">Astronaut Dashboard</h1>
+        <div class="subtitle" id="a-subtitle">Loading telemetry…</div>
+      </div>
+      <div class="dash-controls">
+        <select id="a-crew-select" class="select" aria-label="Select crew member"></select>
+        <label class="select" style="display:flex; align-items:center; gap:10px;">
+          <span class="mono" style="font-size:0.76rem; color:var(--text-faint);">MISSION DAY</span>
+          <input type="range" id="a-day-slider" min="1" max="45" value="30" />
+          <span class="mono" id="a-day-value" style="min-width:2ch;">30</span>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <main class="dash-body">
+    <div id="a-incoming-message-slot"></div>
+
+    <div class="panel status-banner" id="a-status-banner">
+      <div><div class="status-banner__code" id="a-status-code">—</div></div>
+      <div class="status-banner__desc" id="a-status-desc">Loading…</div>
+    </div>
+
+    <div class="grid-3">
+      <div class="panel card">
+        <div class="card__head"><h3>Vitals</h3><span class="hint">latest reading</span></div>
+        <div class="metric-grid" id="a-vitals-grid"></div>
+        <div class="chart-wrap" id="a-hr-chart" style="margin-top:14px;"></div>
+        <div class="footnote">Resting heart rate, 14-day trend. Dashed grey line = your personal baseline (mission days 1–7).</div>
+      </div>
+
+      <div class="panel card">
+        <div class="card__head"><h3>Sleep &amp; Recovery</h3><span class="hint" id="a-sleep-hint"></span></div>
+        <div class="metric-grid" id="a-sleep-grid"></div>
+        <div class="chart-wrap" id="a-sleep-chart" style="margin-top:14px;"></div>
+        <div class="footnote" id="a-sleep-footnote"></div>
+      </div>
+
+      <div class="panel card">
+        <div class="card__head"><h3>Activity &amp; Exercise</h3><span class="hint" id="a-exercise-hint"></span></div>
+        <div class="metric-grid" id="a-exercise-grid"></div>
+        <div class="chart-wrap" id="a-exercise-chart" style="margin-top:14px;"></div>
+        <div class="footnote" id="a-exercise-footnote"></div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel card">
+        <div class="card__head"><h3>Wellbeing Check-In</h3><span class="hint">1 = low · 5 = high</span></div>
+        <div id="a-wellbeing-sliders"></div>
+        <button class="btn btn--primary" id="a-submit-wellbeing" style="margin-top:6px;">Submit today's check-in</button>
+        <div class="footnote">Updates your current-day self-assessment and re-runs the alert engine — does not modify the underlying CSV file.</div>
+      </div>
+
+      <div class="panel card">
+        <div class="card__head"><h3>Musculoskeletal Status</h3><span class="hint">modeled, not measured</span></div>
+        <div id="a-musculoskeletal-panel"></div>
+      </div>
+    </div>
+
+    <div class="panel card">
+      <div class="card__head"><h3>Active Alerts</h3><span class="hint" id="a-alerts-hint"></span></div>
+      <div class="alert-list" id="a-alerts-list"></div>
+    </div>
+
+    <div class="panel card">
+      <div class="card__head"><h3>History</h3><span class="hint">shared with Mission Control</span></div>
+      <div style="overflow-x:auto;">
+        <table class="log-table" id="a-history">
+          <thead><tr><th>Time</th><th>Event</th><th>Detail</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ==================================================================
+     MISSION CONTROL VIEW
+     ================================================================== -->
+<div id="view-mission-control" class="app-view">
+
+  <header class="dash-header">
+    <div class="dash-titlebar">
+      <div>
+        <h1>Mission Control</h1>
+        <div class="subtitle" id="m-subtitle">Loading telemetry…</div>
+      </div>
+      <div class="dash-controls">
+        <label class="select" style="display:flex; align-items:center; gap:10px;">
+          <span class="mono" style="font-size:0.76rem; color:var(--text-faint);">MISSION DAY</span>
+          <input type="range" id="m-day-slider" min="1" max="45" value="30" />
+          <span class="mono" id="m-day-value" style="min-width:2ch;">30</span>
+        </label>
+      </div>
+    </div>
+  </header>
+
+  <main class="dash-body">
+    <div class="panel status-banner" id="m-status-banner">
+      <div><div class="status-banner__code" id="m-status-code">—</div></div>
+      <div class="status-banner__desc" id="m-status-desc">Loading…</div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel card">
+        <div class="card__head"><h3>Crew Status</h3><span class="hint">tap to inspect</span></div>
+        <div class="crew-roster" id="m-crew-roster"></div>
+      </div>
+
+      <div class="panel card">
+        <div class="card__head"><h3>Life Support &amp; Environment</h3><span class="hint">station-wide</span></div>
+        <div class="metric-grid" id="m-env-grid"></div>
+        <div class="chart-wrap" id="m-co2-chart" style="margin-top:14px;"></div>
+        <div class="footnote" id="m-env-footnote"></div>
+      </div>
+    </div>
+
+    <div class="panel card">
+      <div class="card__head">
+        <h3 id="m-crew-detail-name">Crew detail</h3>
+        <span class="hint" id="m-crew-detail-role"></span>
+      </div>
+      <div class="grid-3" id="m-crew-detail-grids"></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel card">
+        <div class="card__head"><h3>Active Alerts</h3><span class="hint" id="m-alerts-hint"></span></div>
+        <div class="alert-list" id="m-alerts-list"></div>
+      </div>
+
+      <div class="panel card composer">
+        <div class="card__head"><h3>Send Recommendation</h3><span class="hint">to selected crew member</span></div>
+        <div class="template-row" id="m-template-chips"></div>
+        <textarea id="m-message-text" placeholder="Recommended action…"></textarea>
+        <button class="btn btn--primary" id="m-send-message" style="margin-top:12px;">Send to astronaut</button>
+        <div class="footnote">Recorded in History and delivered to the astronaut's dashboard for acknowledgement.</div>
+      </div>
+    </div>
+
+    <div class="panel card">
+      <div class="card__head"><h3>Mission History</h3><span class="hint">all crew &amp; environment events</span></div>
+      <div style="overflow-x:auto;">
+        <table class="log-table" id="m-history">
+          <thead><tr><th>Time</th><th>Event</th><th>Detail</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<footer class="site-footer">
+  All telemetry is simulated. Thresholds sourced in data/nasa-references.json — see README.md.
+</footer>
+
+<script src="data/data.js"></script>
+<script src="assets/js/common.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>

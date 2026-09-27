@@ -1,0 +1,13 @@
+{
+  "mission_id": "DEMO-1",
+  "mission_title": "Astronaut Health Monitor — Demo Mission",
+  "mission_day_range": [1, 45],
+  "baseline_window_days": [1, 7],
+  "crew_size": 3,
+  "notes": [
+    "This mission timeline is SIMULATED for the NASA Space Apps Challenge prototype.",
+    "Mission days 1-7 are used as each crew member's personal baseline window.",
+    "Around mission day 19-33, Cmdr. Reyes's telemetry is scripted to show a gradual, multi-parameter decline (sleep, exercise compliance, resting heart rate, fatigue) for demonstration purposes, followed by a recovery trend after a simulated Mission Control intervention.",
+    "Cabin CO2 is scripted to drift upward through the same window, crossing the NASA-STD-3001 average 1-hour limit, then recover."
+  ]
+}

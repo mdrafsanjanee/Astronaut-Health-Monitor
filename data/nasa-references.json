@@ -1,0 +1,109 @@
+{
+  "_readme": "Thresholds below are CONFIGURABLE reference points used by this prototype's alert engine. Where a value is defined by an official NASA standard, the citation says so explicitly. Where NASA does not publish a specific numeric requirement (e.g. exact vitals cutoffs), the citation says the value is a general clinical / operational reference used for demo purposes, not an official NASA number. Do not present anything in this file as a certified flight requirement.",
+
+  "vitals": {
+    "heart_rate_bpm": {
+      "nominal": [50, 90],
+      "attention": [90, 100],
+      "critical_above": 100,
+      "critical_below": 45,
+      "source": "General clinical resting heart-rate reference range (not NASA-specific). Individual astronaut baselines vary; this prototype also compares against each crew member's own 7-day baseline."
+    },
+    "respiration_rate": {
+      "nominal": [12, 20],
+      "attention": [20, 24],
+      "critical_above": 24,
+      "critical_below": 10,
+      "source": "General clinical respiration-rate reference range (not NASA-specific)."
+    },
+    "spo2_pct": {
+      "nominal_min": 95,
+      "attention_min": 90,
+      "critical_below": 90,
+      "source": "General clinical SpO2 reference range (not NASA-specific)."
+    },
+    "skin_temp_c": {
+      "nominal": [36.1, 37.2],
+      "attention": [37.2, 38.0],
+      "critical_above": 38.0,
+      "critical_below": 36.0,
+      "source": "General clinical body-temperature reference range (not NASA-specific)."
+    }
+  },
+
+  "sleep": {
+    "scheduled_hr": 8.5,
+    "attention_trailing3_below": 7.0,
+    "critical_trailing3_below": 6.0,
+    "source": "NASA schedules 8.5 h of sleep per night in flight, but the largest study of spaceflight sleep found crews average only ~5.96 h (Shuttle) and ~6.09 h (ISS) per night. (Barger LK, et al. 'Prevalence of sleep deficiency and use of hypnotic drugs in astronauts before, during, and after spaceflight.' Lancet Neurology, 2014;13:904-912.) This prototype flags a trailing 3-day average below 7.0 h as ATTENTION and below 6.0 h as CRITICAL, i.e. at/below the historical spaceflight average."
+  },
+
+  "exercise": {
+    "prescribed_minutes_per_day": 150,
+    "prescribed_days_per_week": 6,
+    "attention_compliance_pct": 90,
+    "critical_compliance_pct": 70,
+    "critical_sustained_days": 5,
+    "source": "ISS crews are prescribed about 2.5 h/day of aerobic + resistance exercise, 6 days/week, as a countermeasure to cardiovascular and musculoskeletal deconditioning (Ploutz-Snyder L., 'An Evidence-Based Approach to Exercise Prescriptions on ISS,' NASA JSC; Smith SM, et al., J Bone Miner Res, 2012)."
+  },
+
+  "wellbeing_1_5": {
+    "attention_at_or_below": 3,
+    "critical_at_or_below": 2,
+    "persistent_decline_days": 3,
+    "source": "Simple 1-5 daily self-assessment scale defined for this prototype (mood, stress, fatigue, motivation, social wellbeing), per the challenge brief. Not a clinical or diagnostic instrument."
+  },
+
+  "musculoskeletal": {
+    "bone_loss_pct_per_month_range": [0.4, 2.7],
+    "bone_loss_pct_per_month_typical": 1.0,
+    "attention_cumulative_loss_pct": 3.0,
+    "critical_cumulative_loss_pct": 6.0,
+    "source": "Weight-bearing bone sites lose an estimated 0.4-2.7% BMD per month in microgravity absent effective countermeasures; recovery after return can take a year or more and is not always complete (Sibonga JD, et al.; Lang T, et al.; cited in NASA/TM-2018-219938). Long-duration ISS/Mir crews without adequate resistance exercise have shown >10% loss at some skeletal sites (Shackelford LC, et al.). Adequately varied, high-compliance resistance exercise combined with proper nutrition has been shown to preserve BMD and bone mass in most regions (Smith SM, et al., 2012). This prototype computes a MODELED, NOT MEASURED, cumulative loss estimate from mission duration and each crew member's average resistance-exercise compliance — it is not a substitute for real bone densitometry."
+  },
+
+  "environment": {
+    "co2_mmhg": {
+      "nominal_below": 2.5,
+      "attention": [2.5, 4.0],
+      "critical_above": 4.0,
+      "source": "NASA-STD-3001 Vol 2 Rev D [V2 6004] limits the average 1-hour cabin CO2 partial pressure (ppCO2) to no more than 3.0 mmHg, chosen to keep headache incidence below ~1.4%. Historically, ISS has operated in the 1-9 mmHg range with typical operations nearer 4.0 mmHg using CDRA; reported symptoms (headache, fatigue, malaise) increase between 2.8-4.5 mmHg and further above 4.5 mmHg. (OCHMO Technical Brief OCHMO-TB-004, 'Carbon Dioxide.')"
+    },
+    "o2_pp_mmhg": {
+      "nominal": [145, 155],
+      "attention": [[140, 145], [155, 160]],
+      "critical_below": 140,
+      "critical_above": 160,
+      "source": "NASA-STD-3001 Vol 2 [V2 6003] defines a 145-155 mmHg O2 partial-pressure normoxia target range for crew exposure. (OCHMO Technical Brief OCHMO-TB-002, 'Environmental Control & Life Support System.')"
+    },
+    "cabin_pressure_psia": {
+      "nominal": [14.2, 14.9],
+      "attention": [[13.0, 14.2], [14.9, 15.0]],
+      "critical_below": 13.0,
+      "critical_above": 15.0,
+      "source": "NASA-STD-3001 Vol 2 [V2 6006/HS3004] sets a nominal indefinite-exposure total-pressure tolerance band of 7.5-15.0 psia for vehicle operations, with typical shirtsleeve operations nearer 14.7 psia. This prototype uses a narrower comfort/nominal band inside that certified envelope and flags approach toward its edges."
+    },
+    "cabin_temp_c": {
+      "nominal": [20, 24],
+      "attention": [[18, 20], [24, 27]],
+      "critical_below": 18,
+      "critical_above": 27,
+      "source": "NASA-STD-3001 requires the cabin atmosphere be maintained between 18-27 degC (64.4-80.6 degF) during nominal flight operations. (NASA Human Integration Design Handbook / NASA-STD-3001 Vol 2.)"
+    },
+    "humidity_pct": {
+      "nominal": [40, 60],
+      "attention": [[25, 40], [60, 75]],
+      "critical_below": 25,
+      "critical_above": 75,
+      "source": "NASA-STD-3001 Vol 2 specifies an allowable relative-humidity range of roughly 25-75%, with 40-60% preferred for comfort. (OCHMO Technical Brief OCHMO-TB-002 / OCHMO-TB-003.)"
+    }
+  },
+
+  "resources": {
+    "food_kcal_per_day": 3035,
+    "water_l_per_person_per_day": 2.5,
+    "attention_days_remaining": 14,
+    "critical_days_remaining": 7,
+    "source": "NASA-STD-3001 Vol 2 references an average dietary intake near 3,035 kcal/day per crewmember [V2 7003] and a minimum potable water allowance of 2.5 L/day per crewmember [V2 6109]. Remaining-days thresholds (14-day ATTENTION / 7-day CRITICAL buffer) are an operational planning heuristic defined for this prototype, not an official NASA requirement."
+  }
+}

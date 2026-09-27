@@ -1,0 +1,24 @@
+{
+  "mission_name": "Simulated Long-Duration Mission — Demo",
+  "note": "All crew members, names, and telemetry in this file and in telemetry.csv are SIMULATED for prototype purposes. This is not real astronaut data.",
+  "members": [
+    {
+      "id": "CMD-01",
+      "name": "Cmdr. Amara Reyes",
+      "role": "Mission Commander",
+      "photo_initials": "AR"
+    },
+    {
+      "id": "FE-02",
+      "name": "Flt. Eng. Kenji Tanaka",
+      "role": "Flight Engineer",
+      "photo_initials": "KT"
+    },
+    {
+      "id": "MS-03",
+      "name": "Msn. Spec. Fatima Noor",
+      "role": "Mission Specialist",
+      "photo_initials": "FN"
+    }
+  ]
+}

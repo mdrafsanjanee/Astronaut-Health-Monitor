@@ -1,0 +1,293 @@
+/* ==========================================================================
+   theme.css — shared design tokens, base elements, and the site nav.
+   Loaded on every page. Page-specific layout lives in pages.css.
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  /* Surfaces */
+  --bg: #05070d;
+  --bg-hero: radial-gradient(ellipse 120% 80% at 50% -20%, #0b1530 0%, #05070d 55%);
+  --panel: #10141f;
+  --panel-alt: #161c2b;
+  --panel-raised: #1b2233;
+  --border: #232b3d;
+  --border-soft: #1a2032;
+
+  /* Text */
+  --text: #e7ecf5;
+  --text-dim: #8a93a8;
+  --text-faint: #5c6478;
+
+  /* Brand — drawn from the NASA insignia palette */
+  --nasa-blue: #0b3d91;
+  --nasa-blue-bright: #2e5fc7;
+  --nasa-red: #fc3d21;
+
+  /* Status system (used everywhere: dashboards, alerts, badges) */
+  --status-nominal: #39c2c9;
+  --status-nominal-dim: #163338;
+  --status-attention: #f2a93b;
+  --status-attention-dim: #3a2c11;
+  --status-critical: #fc3d21;
+  --status-critical-dim: #3a1410;
+
+  /* Type */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --radius: 10px;
+  --radius-sm: 6px;
+  --nav-height: 64px;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+p { margin: 0 0 0.75em; color: var(--text-dim); }
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, select, input {
+  font-family: inherit;
+  color: inherit;
+}
+
+.mono { font-family: var(--font-mono); }
+
+/* --------------------------------------------------------------------------
+   Nav — logo left, links right (collapses to a hamburger under 760px)
+   -------------------------------------------------------------------------- */
+
+.site-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  height: var(--nav-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  background: rgba(5, 7, 13, 0.86);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.site-nav__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  white-space: nowrap;
+}
+
+.site-nav__mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(155deg, var(--nasa-blue-bright), var(--nasa-blue));
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.site-nav__links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.site-nav__links a {
+  font-size: 0.92rem;
+  color: var(--text-dim);
+  transition: color 0.15s ease;
+}
+
+.site-nav__links a:hover,
+.site-nav__links a[aria-current="page"] {
+  color: var(--text);
+}
+
+.site-nav__links a[aria-current="page"] {
+  position: relative;
+}
+
+.site-nav__links a[aria-current="page"]::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: -21px;
+  height: 2px;
+  background: var(--status-nominal);
+}
+
+.site-nav__toggle {
+  display: none;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.site-nav__toggle span {
+  display: block;
+  width: 16px;
+  height: 2px;
+  background: var(--text);
+}
+
+@media (max-width: 760px) {
+  .site-nav__toggle { display: flex; }
+
+  .site-nav__links {
+    position: absolute;
+    top: var(--nav-height);
+    left: 0; right: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s ease;
+  }
+
+  .site-nav__links.is-open {
+    max-height: 320px;
+  }
+
+  .site-nav__links a {
+    width: 100%;
+    padding: 14px 28px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+
+  .site-nav__links a[aria-current="page"]::after { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   Shared building blocks
+   -------------------------------------------------------------------------- */
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+}
+
+.pill--nominal  { color: var(--status-nominal);   background: var(--status-nominal-dim);   border-color: transparent; }
+.pill--attention{ color: var(--status-attention); background: var(--status-attention-dim); border-color: transparent; }
+.pill--critical { color: var(--status-critical);  background: var(--status-critical-dim);  border-color: transparent; }
+
+.dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot--nominal   { background: var(--status-nominal);   box-shadow: 0 0 8px var(--status-nominal); }
+.dot--attention { background: var(--status-attention); box-shadow: 0 0 8px var(--status-attention); }
+.dot--critical  { background: var(--status-critical);  box-shadow: 0 0 8px var(--status-critical); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--panel-alt);
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.btn:hover { border-color: var(--text-faint); }
+.btn:focus-visible, a:focus-visible, button:focus-visible, select:focus-visible {
+  outline: 2px solid var(--status-nominal);
+  outline-offset: 2px;
+}
+
+.btn--primary {
+  background: var(--nasa-blue);
+  border-color: var(--nasa-blue-bright);
+}
+.btn--primary:hover { background: var(--nasa-blue-bright); }
+
+.btn--danger {
+  background: var(--status-critical-dim);
+  border-color: var(--status-critical);
+  color: #ffd6cf;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+.site-footer {
+  border-top: 1px solid var(--border-soft);
+  padding: 28px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 0.82rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
