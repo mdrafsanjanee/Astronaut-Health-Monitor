@@ -1,0 +1,57 @@
+{
+  "_readme": "What CURRENT (2020s) NASA/ISS astronaut health monitoring actually tracks, for comparison and to drive the app's clearly-labeled 'Modern Monitoring (Simulated)' panel. None of this was measured on Apollo 15 — it did not exist in 1971. Every value the app computes from this file is tagged 'simulated' in the UI, never presented as historical fact.",
+
+  "bio_monitor": {
+    "name": "Bio-Monitor",
+    "developer": "Canadian Space Agency (CSA), built by Carré Technologies from their commercial Hexoskin garment",
+    "status": "Actively flown on the ISS today — tested by CSA astronaut David Saint-Jacques in 2019 and still in use as of 2025 per NASA's own reporting.",
+    "form_factor": "Smart shirt + headband + tablet app; worn under normal clothing, no separate time set aside for readings",
+    "parameters": [
+      { "name": "Heart rate", "sensor": "3-lead ECG" },
+      { "name": "Respiration rate", "sensor": "Thoracic + abdominal respiratory bands" },
+      { "name": "Blood oxygen saturation (SpO2)", "sensor": "Forehead SpO2 sensor" },
+      { "name": "Skin temperature", "sensor": "Skin-contact thermistor" },
+      { "name": "Systolic blood pressure", "sensor": "Continuous estimate (not a cuff reading) derived from pulse-transit-time" },
+      { "name": "Physical activity", "sensor": "3-axis accelerometer" },
+      { "name": "Sleep quality / staging", "sensor": "Derived from the above during rest periods" }
+    ],
+    "source": "Canadian Space Agency, \"Bio-Monitor: Keeping an eye on astronauts' vital signs\"; FrogHeart / Waterloo Vascular Aging study (sensor list); NASA ISS blog, Jan 2019; The Industrial Review, \"NASA's Health Monitoring Strategy Aboard the ISS,\" 2025"
+  },
+
+  "co2_operational_bands_mmhg": {
+    "note": "Real, current ISS operational guidance — tighter than the NASA-STD-3001 3.0 mmHg design limit, based on directly observed crew symptom reports in recent expeditions.",
+    "bands": [
+      { "range": [0, 2.3], "effect": "No reported symptoms" },
+      { "range": [2.3, 2.7], "effect": "Fatigue, \"full-headedness\" reported" },
+      { "range": [2.7, 3.0], "effect": "Self-reported missed procedure steps / procedures running long" },
+      { "range": [3.0, 3.4], "effect": "Headaches reported" },
+      { "range": [3.4, 4.5], "effect": "Headaches worsen; fatigue, malaise, flushing" },
+      { "range": [4.5, 999], "effect": "Nausea, decreased sleep, 5th-cranial-nerve dysesthesia reported" }
+    ],
+    "historical_iss_range": "1-9 mmHg over ISS program history; typical operations now targeted below 3.0 mmHg 24-hour average",
+    "source": "NASA OCHMO-TB-004, \"Carbon Dioxide\" (Rev C/D, 2022-2023); NASA, \"CO2 on the International Space Station: An Operations Update\" (NTRS 20150019624)"
+  },
+
+  "radiation_modern": {
+    "note": "Apollo 15's dosimeters were passive — read out after splashdown, not monitored in real time. The ISS instead uses continuously-read area and personal dosimetry today.",
+    "examples": [
+      "RaDI-N / RaDI-N2 (Canadian Space Agency): neutron 'bubble detectors' placed around the ISS",
+      "Personal and area dosimeters read on an ongoing basis rather than only postflight"
+    ],
+    "source": "NASA ISS On-Orbit Status Report, June 2016 (RaDI-N deployment)"
+  },
+
+  "sans": {
+    "name": "Spaceflight Associated Neuro-ocular Syndrome (SANS)",
+    "note": "A real, actively-studied risk that is specifically DURATION-dependent — about 1 in 3 astronauts on long-duration (months-long) ISS missions show at least one confirmed ocular finding (optic disc edema, globe flattening, choroidal folds, hyperopic shift). Apollo 15 was 12.3 days — far too short for SANS to plausibly develop, which is why it is not modeled as an ongoing risk for this mission, only noted here as a modern contrast.",
+    "monitored_today_with": "Onboard fundoscopy, optical coherence tomography (OCT), and orbital ultrasound",
+    "source": "Wikipedia, \"Spaceflight associated neuro-ocular syndrome\"; Brunstetter T., NASA JSC, \"Introduction to SANS\" (NTRS 20170009173); Frontiers in Neurology, 2021"
+  },
+
+  "behavioral_health": {
+    "name": "Behavioral Health and Performance (BHP) monitoring",
+    "note": "Modern crews are tracked for fatigue, workload, and psychological wellbeing through private weekly conferences with a flight surgeon and dedicated software, not a single daily 1-5 self-report — the simplified slider in this app's Wellbeing Check-In is a teaching simplification of this, not a real instrument.",
+    "example_tool": "Behavioral Health and Performance Dashboard (BHP-DS), built on the Circadian Performance Simulation Software (Harvard Biomathematical Modeling Unit)",
+    "source": "NASA TechPort, project 34468 (BHP-DS)"
+  }
+}

@@ -88,6 +88,38 @@ Every screen makes this distinction visible, not just this README:
   input in a modern, real-time version. Every entry it creates is
   tagged `DEMO` in Mission History, right next to the real record.
 
+## Modern monitoring layer (what today's NASA systems track)
+
+The 1971 record is sparse by nature: Apollo's bioharness measured only ECG
+and respiration. To show what a current system adds, the app carries a
+clearly separate, violet-outlined **modern layer**, built from real current
+NASA/CSA hardware and guidance in `data/modern-monitoring.json`:
+
+- **Bio-Monitor parameters** (CSA smart shirt, flown on the ISS today):
+  heart rate (3-lead ECG), respiration, SpO2, skin temperature, a
+  continuous systolic-BP estimate, physical activity and sleep quality.
+  Shown in the Astronaut view as *"Modern Monitoring"*, with the label
+  **SIMULATED - not measured on Apollo 15** on the card itself.
+- **Live radiation dose.** Endpoints are real (360 mrad Scott, 510 mrad
+  Irwin; 300 mrad crew passive average used for Worden, who handed his
+  personal dosimeter to Scott). The accumulation curve is estimated,
+  because Apollo dosimeters were read only after landing.
+- **Sleep quality score** that follows the real displaced-sleep events
+  (about 2 h, 2 h and 7 h, then roughly 22 h awake before the cardiac event).
+- **Then vs. Now table** (Mission Control): which parameters Apollo 15 could
+  and could not monitor versus a modern Bio-Monitor.
+- **Cabin CO2 Explorer** (Mission Control): drag a ppCO2 value and see the
+  current ISS operational symptom bands (2.3 / 2.7 / 3.0 / 3.4 / 4.5 mmHg),
+  from NASA OCHMO-TB-004 and the NASA CO2 operations update. Not an Apollo
+  measurement; NASA-STD-3001's design limit is 3.0 mmHg.
+- **Context cards** on SANS (spaceflight neuro-ocular syndrome; about 1 in 3
+  long-duration ISS astronauts affected, too duration-dependent to appear in a
+  12-day mission) and Behavioral Health & Performance monitoring.
+
+One deliberate teaching point: Apollo's cabin was 100% oxygen, so a modern
+SpO2 sensor would read near the top of the scale all mission. Irwin's real
+problem was rhythm, not oxygenation; no SpO2 number would have caught it.
+
 ## Corrections made from the previous (fictional) version
 
 Building this on real data surfaced two mismatches worth stating
@@ -168,6 +200,8 @@ Astronaut-Health-Monitor/
 │   ├── mission.json            Real mission metadata (GET range, dates)
 │   ├── nasa-references.json    Flown-hardware facts (cited) + a
 │   │                           modern-ISS comparison section
+│   ├── modern-monitoring.json  Current Bio-Monitor parameters, CO2 bands,
+│   │                           radiation, SANS, BHP (cited)
 │   └── data.js                 AUTO-GENERATED embed of the four files
 │                                above (see tools/build_data_js.py — this
 │                                is what lets the app run via file://
@@ -201,6 +235,13 @@ afterward so `data.js` picks up your changes.
   window for Irwin's arrhythmia.
 - KUOW "Primed" podcast, season 3 episode 4 — Dr. Charles Berry's
   quoted assessment of Irwin's condition.
+- Canadian Space Agency, "Bio-Monitor: Keeping an eye on astronauts' vital
+  signs"; NASA ISS blog (Jan 2019); Waterloo Vascular Aging study via
+  FrogHeart - Bio-Monitor sensor list.
+- NASA OCHMO-TB-004, "Carbon Dioxide" (Rev C/D) and NTRS 20150019624 -
+  modern CO2 operational bands.
+- Brunstetter T., NASA JSC (NTRS 20170009173) and Frontiers in Neurology
+  (2021) - SANS prevalence and monitoring.
 - NASA SP-368, *Biomedical Results of Apollo* — Command/Service Module
   Environmental Control System design (cabin atmosphere, CO2 removal).
 - NASA, "Apollo 15 Mission Details" (nasa.gov) and Wikipedia's Apollo 15

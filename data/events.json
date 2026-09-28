@@ -21,7 +21,7 @@
     "get_hours": 106.713,
     "category": "eva",
     "title": "Stand-up EVA begins",
-    "detail": "Scott performs a stand-up EVA through the LM's top hatch, photographing the landing site (GET 106:42:49–107:15:56).",
+    "detail": "Scott performs a stand-up EVA through the LM's top hatch, photographing the landing site (GET 106:42:49\u2013107:15:56).",
     "crew_id": "CDR",
     "precision": "exact",
     "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
@@ -30,10 +30,11 @@
     "get_hours": 107.5,
     "category": "sleep",
     "title": "1st lunar-surface sleep period",
-    "detail": "Scheduled sleep cycle shifted about 2 hours versus Earth-normal timing — the smallest of the mission's three lunar-surface sleep displacements.",
+    "detail": "Scheduled sleep cycle shifted about 2 hours versus Earth-normal timing \u2014 the smallest of the mission's three lunar-surface sleep displacements.",
     "crew_id": null,
     "precision": "approximate",
-    "source": "Apollo 15 Mission Report, Section 10.2.3 (Sleep)"
+    "source": "Apollo 15 Mission Report, Section 10.2.3 (Sleep)",
+    "sleep_quality_pct": 80
   },
   {
     "get_hours": 119.655,
@@ -45,7 +46,7 @@
     "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
   },
   {
-    "get_hours": 126.200,
+    "get_hours": 126.2,
     "category": "eva",
     "title": "EVA-1 ends",
     "detail": "LM repressurized, GET 126:11:59. Duration 6h 32m 42s. Average heart rate: Scott 92 bpm, Irwin 125 bpm.",
@@ -60,7 +61,8 @@
     "detail": "Sleep cycle shifted about 2 hours. Crew went to sleep an hour later than planned and had to wake an hour early to fix a cabin oxygen leak.",
     "crew_id": null,
     "precision": "approximate",
-    "source": "Apollo 15 Mission Report, Section 10.2.3 (Sleep)"
+    "source": "Apollo 15 Mission Report, Section 10.2.3 (Sleep)",
+    "sleep_quality_pct": 70
   },
   {
     "get_hours": 142.247,
@@ -72,7 +74,7 @@
     "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
   },
   {
-    "get_hours": 149.450,
+    "get_hours": 149.45,
     "category": "eva",
     "title": "EVA-2 ends",
     "detail": "LM repressurized, GET 149:27:02. Duration 7h 12m 14s. Average heart rate: Scott 84 bpm, Irwin 107 bpm.",
@@ -84,7 +86,7 @@
     "get_hours": 150.0,
     "category": "medical",
     "title": "Commander takes aspirin for shoulder pain",
-    "detail": "Scott develops pain in his right shoulder after a difficult deep-core-tube drilling operation during surface work. He takes aspirin for relief — 14 tablets total across the mission, the only medication either surface crewman used.",
+    "detail": "Scott develops pain in his right shoulder after a difficult deep-core-tube drilling operation during surface work. He takes aspirin for relief \u2014 14 tablets total across the mission, the only medication either surface crewman used.",
     "crew_id": "CDR",
     "precision": "approximate",
     "source": "Apollo 15 Mission Report, Section 10.2.2 (Medications)"
@@ -93,10 +95,11 @@
     "get_hours": 155.0,
     "category": "sleep",
     "title": "3rd lunar-surface sleep period",
-    "detail": "The largest displacement of the mission — about 7 hours versus Earth-normal timing. The period was shortened from a planned 7 hours to 6.5 hours to make time for EVA-3 preparations.",
+    "detail": "The largest displacement of the mission \u2014 about 7 hours versus Earth-normal timing. The period was shortened from a planned 7 hours to 6.5 hours to make time for EVA-3 preparations.",
     "crew_id": null,
     "precision": "approximate",
-    "source": "Apollo 15 Mission Report, Section 10.2.3 (Sleep)"
+    "source": "Apollo 15 Mission Report, Section 10.2.3 (Sleep)",
+    "sleep_quality_pct": 55
   },
   {
     "get_hours": 163.304,
@@ -139,7 +142,7 @@
     "category": "medical",
     "title": "Cardiac arrhythmia detected (Irwin)",
     "severity": "CRITICAL",
-    "detail": "Flight surgeons on the ground observe a bigeminy rhythm — paired heartbeats with pauses — on Irwin's EKG telemetry: 5 premature ventricular contractions (PVCs) in 30 seconds. Likely cause: potassium loss (hypokalemia) from mission stress and workload.",
+    "detail": "Flight surgeons on the ground observe a bigeminy rhythm \u2014 paired heartbeats with pauses \u2014 on Irwin's EKG telemetry: 5 premature ventricular contractions (PVCs) in 30 seconds. Likely cause: potassium loss (hypokalemia) from mission stress and workload.",
     "crew_id": "LMP",
     "precision": "approximate",
     "source": "Delp/arXiv:2208.00892 (citing flight data); Wikipedia \"Return of Apollo 15 to Earth\"; KUOW \"Primed\" (Dr. Charles Berry quote)"
@@ -149,7 +152,7 @@
     "category": "mission-control-decision",
     "title": "Flight Directors decide not to inform Commander Scott",
     "severity": "ATTENTION",
-    "detail": "NASA's chief flight surgeon, Dr. Charles Berry, calls Irwin's EKG \"a serious situation\" — the kind he'd put in an ICU on Earth. Flight leadership (Kraft, Kranz) choose not to tell Scott, reasoning Irwin is already effectively monitored, on pure oxygen, in zero-g. The crew is not told during the mission.",
+    "detail": "NASA's chief flight surgeon, Dr. Charles Berry, calls Irwin's EKG \"a serious situation\" \u2014 the kind he'd put in an ICU on Earth. Flight leadership (Kraft, Kranz) choose not to tell Scott, reasoning Irwin is already effectively monitored, on pure oxygen, in zero-g. The crew is not told during the mission.",
     "crew_id": "LMP",
     "precision": "approximate",
     "source": "Wikipedia \"Return of Apollo 15 to Earth\"; collectSPACE forum discussion citing Kraft's and Kranz's memoirs; KUOW \"Primed\" podcast"
@@ -161,7 +164,8 @@
     "detail": "Before the crew's next sleep period, Slayton radios up a recommendation to take a Seconal sedative. The crew declines. They finally get to sleep 3.5 hours later than planned, after roughly 22 hours awake.",
     "crew_id": null,
     "precision": "approximate",
-    "source": "Wikipedia \"Return of Apollo 15 to Earth\""
+    "source": "Wikipedia \"Return of Apollo 15 to Earth\"",
+    "sleep_quality_pct": 40
   },
   {
     "get_hours": 181.494,
@@ -185,7 +189,7 @@
     "get_hours": 241.0,
     "category": "eva",
     "title": "Worden's deep-space EVA",
-    "detail": "Alfred Worden leaves the Command Module to retrieve film cassettes from the SIM bay — the first deep-space EVA in history, roughly 320,000 km from Earth. Completed in about 18 minutes.",
+    "detail": "Alfred Worden leaves the Command Module to retrieve film cassettes from the SIM bay \u2014 the first deep-space EVA in history, roughly 320,000 km from Earth. Completed in about 18 minutes.",
     "crew_id": "CMP",
     "precision": "approximate",
     "source": "NASA, Apollo 15 Mission Details"
@@ -230,7 +234,7 @@
     "get_hours": 295.5,
     "category": "postflight",
     "title": "Radiation dosimetry",
-    "detail": "Personal dosimeters read 360 millirad (Scott) and 510 millirad (Irwin) net integrated dose; passive dosimeters worn by all three crew averaged 300 millirad at skin depth — well below thresholds for detectable medical effect.",
+    "detail": "Personal dosimeters read 360 millirad (Scott) and 510 millirad (Irwin) net integrated dose; passive dosimeters worn by all three crew averaged 300 millirad at skin depth \u2014 well below thresholds for detectable medical effect.",
     "crew_id": null,
     "precision": "exact",
     "source": "Apollo 15 Mission Report, Section 10.2.4 (Radiation)"
@@ -239,7 +243,7 @@
     "get_hours": 295.6,
     "category": "postflight",
     "title": "Return-to-baseline cardiovascular fitness",
-    "detail": "Post-flight bicycle-ergometer and lower-body-negative-pressure tests took about a week per crewman to return to preflight baseline — longer than on earlier missions. Both surface crewmen showed a cardiovascular response at higher heart-rate levels not seen on previous flights.",
+    "detail": "Post-flight bicycle-ergometer and lower-body-negative-pressure tests took about a week per crewman to return to preflight baseline \u2014 longer than on earlier missions. Both surface crewmen showed a cardiovascular response at higher heart-rate levels not seen on previous flights.",
     "crew_id": null,
     "precision": "exact",
     "source": "Apollo 15 Mission Report, Section 10.3 (Physical Examinations)"

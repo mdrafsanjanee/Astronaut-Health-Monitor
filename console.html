@@ -28,9 +28,7 @@
   </div>
 </nav>
 
-<!-- ==================================================================
-     SIMULATION CONTROL BAR — shared by both views
-     ================================================================== -->
+<!-- SIMULATION CONTROL BAR — shared by both views -->
 <div class="sim-bar">
   <div class="sim-bar__inner">
     <div class="sim-bar__get">
@@ -51,9 +49,7 @@
   </div>
 </div>
 
-<!-- ==================================================================
-     ASTRONAUT VIEW
-     ================================================================== -->
+<!-- ASTRONAUT VIEW -->
 <div id="view-astronaut" class="app-view">
 
   <header class="dash-header">
@@ -91,6 +87,13 @@
       </div>
     </div>
 
+    <div class="panel card card--modern">
+      <div class="card__head"><h3>Modern Monitoring — what today's Bio-Monitor would add</h3><span class="hint">SIMULATED · not measured on Apollo 15</span></div>
+      <div class="metric-grid" id="a-modern-grid"></div>
+      <div class="dose-bar" id="a-dose-bar"></div>
+      <div class="footnote" id="a-modern-footnote"></div>
+    </div>
+
     <div class="panel card">
       <div class="card__head"><h3>Mission Timeline — this crew member</h3><span class="hint" id="a-timeline-hint"></span></div>
       <div class="event-timeline" id="a-timeline"></div>
@@ -109,12 +112,21 @@
         <div id="a-postflight-panel"><div class="empty-state">Revealed after splashdown (GET 295:12).</div></div>
       </div>
     </div>
+
+    <div class="grid-2">
+      <div class="panel card">
+        <div class="card__head"><h3>Long-Duration Risk: SANS</h3><span class="hint">modern context</span></div>
+        <div id="a-sans-panel"></div>
+      </div>
+      <div class="panel card">
+        <div class="card__head"><h3>Behavioral Health &amp; Performance</h3><span class="hint">modern context</span></div>
+        <div id="a-bhp-panel"></div>
+      </div>
+    </div>
   </main>
 </div>
 
-<!-- ==================================================================
-     MISSION CONTROL VIEW
-     ================================================================== -->
+<!-- MISSION CONTROL VIEW -->
 <div id="view-mission-control" class="app-view">
 
   <header class="dash-header">
@@ -166,6 +178,28 @@
         <div class="template-row" id="m-template-chips"></div>
         <textarea id="m-message-text" placeholder="Recommended action…"></textarea>
         <button class="btn btn--primary" id="m-send-message" style="margin-top:12px;">Send to astronaut</button>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel card card--modern">
+        <div class="card__head"><h3>Then vs. Now — parameters monitored</h3><span class="hint">Apollo 15 (1971) vs. CSA Bio-Monitor (ISS today)</span></div>
+        <div style="overflow-x:auto;">
+          <table class="log-table" id="m-then-now">
+            <thead><tr><th>Parameter</th><th>Apollo 15</th><th>Today</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel card card--modern">
+        <div class="card__head"><h3>Cabin CO2 Explorer</h3><span class="hint">modern ISS operational bands</span></div>
+        <div class="slider-row" style="grid-template-columns: 1fr 70px;">
+          <input type="range" id="m-co2-slider" min="0" max="6" step="0.1" value="2.0" />
+          <span class="val mono" id="m-co2-value">2.0 mmHg</span>
+        </div>
+        <div class="co2-effect" id="m-co2-effect"></div>
+        <div class="footnote" id="m-co2-footnote"></div>
       </div>
     </div>
 

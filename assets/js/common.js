@@ -91,6 +91,7 @@ const AHM = (() => {
       mission: window.AHM_DATA.mission,
       events: window.AHM_DATA.events.slice().sort((a, b) => a.get_hours - b.get_hours),
       references: window.AHM_DATA.references,
+      modern: window.AHM_DATA.modern,
     };
   }
 
@@ -228,7 +229,63 @@ const AHM = (() => {
   }
 
   /* ------------------------------------------------------------------ *
-   * 8. Interactive-demo event log
+   * 8. Modern Monitoring (SIMULATED)
+   *    Apollo 15's bioharness measured only ECG + respiration. Today's
+   *    CSA Bio-Monitor (flown on the ISS) also tracks SpO2, skin
+   *    temperature, a continuous systolic-BP estimate, activity and sleep
+   *    quality (see data/modern-monitoring.json). This function answers
+   *    "what would a modern monitor have shown?" using simple,
+   *    deterministic rules tied to the REAL mission timeline. Every
+   *    value it returns is SIMULATED and must be labeled so in the UI.
+   *
+   *    Design notes (kept honest):
+   *    - SpO2: Apollo's cabin was 100% oxygen, so a modern oximeter
+   *      would read at the very top of the scale nearly all mission.
+   *      The real problem (Irwin's rhythm) would NOT show up in SpO2.
+   *    - Radiation: the ENDPOINTS are real (360 mrad Scott, 510 mrad
+   *      Irwin; Worden's own dosimeter was handed to Scott, so his
+   *      value uses the 300 mrad crew passive-dosimeter average). The
+   *      accumulation CURVE between launch and splashdown is estimated;
+   *      Apollo dosimeters were read only after landing.
+   * ------------------------------------------------------------------ */
+
+  const RADIATION_ENDPOINT_MRAD = { CDR: 360, LMP: 510, CMP: 300 };
+  const SPLASHDOWN_HOURS = 295.198;
+
+  function sleepQualityAt(events, hour) {
+    const recent = events
+      .filter((e) => e.sleep_quality_pct !== undefined && e.get_hours <= hour && hour - e.get_hours <= 24)
+      .pop();
+    return recent ? { value: recent.sleep_quality_pct, source: recent.title } : { value: 85, source: 'typical coast-phase rest' };
+  }
+
+  function simulateModernVitals(crewId, hour, events) {
+    const eva = activeEva(crewId, hour);
+    const cardiac = events.some((e) => e.category === 'medical' && e.severity && e.crew_id === crewId
+      && hour >= e.get_hours && hour <= (e.active_until_hours !== undefined ? e.active_until_hours : e.get_hours + 3));
+
+    const spo2 = eva ? 97.6 : 99.3;
+    const skinTemp = 36.6 + (eva ? 0.4 : 0);
+    let systolicBp = eva ? 138 : 116;
+    if (cardiac) systolicBp += 14;
+    const activity = eva ? 'High (EVA)' : (sleepQualityAt(events, hour).source === 'typical coast-phase rest' ? 'Low–moderate' : 'Low');
+    const sleep = sleepQualityAt(events, hour);
+    const doseMrad = Math.min(1, hour / SPLASHDOWN_HOURS) * RADIATION_ENDPOINT_MRAD[crewId];
+
+    return {
+      spo2, skinTemp, systolicBp, activity,
+      sleepQuality: sleep.value, sleepSource: sleep.source,
+      doseMrad, doseEndpointMrad: RADIATION_ENDPOINT_MRAD[crewId],
+    };
+  }
+
+  // Which CO2 operational band (data/modern-monitoring.json) a value falls in.
+  function co2Band(bands, mmhg) {
+    return bands.find((b) => mmhg >= b.range[0] && mmhg < b.range[1]) || bands[bands.length - 1];
+  }
+
+  /* ------------------------------------------------------------------ *
+   * 9. Interactive-demo event log
    *    This is deliberately SEPARATE from the real historical timeline
    *    in data/events.json. It's an in-memory log (shared directly by
    *    reference between the astronaut and Mission Control views — see
@@ -287,6 +344,7 @@ const AHM = (() => {
     EVA_WINDOWS, activeEva,
     eventsUpTo, nextEvent, prevEvent, activeAlertsFor,
     assessCrewMember, assessStation,
+    simulateModernVitals, co2Band,
     readDemoLog, logDemoEvent, acknowledgeDemoEvent, onDemoLogChanged,
   };
 })();

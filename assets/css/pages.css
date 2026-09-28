@@ -454,3 +454,38 @@
   color: var(--text-faint);
   margin-top: 4px;
 }
+
+/* --------------------------------------------------------------------------
+   Modern-monitoring components (clearly distinct from the 1971 record)
+   -------------------------------------------------------------------------- */
+
+.card--modern {
+  border-color: rgba(139, 127, 240, 0.35);
+  background: linear-gradient(160deg, rgba(139, 127, 240, 0.07), var(--panel) 45%);
+}
+
+.dose-bar { margin-top: 16px; }
+.dose-bar__head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.dose-bar__track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--panel-raised);
+  overflow: hidden;
+}
+.dose-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--gold));
+  border-radius: 999px;
+  transition: width 0.2s linear;
+}
+
+.co2-effect { margin: 6px 0 12px; font-size: 0.9rem; min-height: 2.4em; }
+
+.cell-none { color: var(--text-faint); }
+.cell-now { color: var(--status-nominal); }

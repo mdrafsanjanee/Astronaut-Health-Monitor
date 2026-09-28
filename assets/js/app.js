@@ -179,10 +179,49 @@
       const respSeries = rollingSeries(rows, sim.hour, 48, 'respiration_rate', 'respiration_basis');
       document.getElementById('a-resp-chart').innerHTML = AHM_CHARTS.sparkline(respSeries.values, { color: '#43d1b0', evaShading: respSeries.evaShading });
 
+      renderModern();
+      renderContext();
       renderTimeline(crew);
       renderWellbeing();
       renderPostflight();
       renderIncomingMessage(crew);
+    }
+
+    function renderModern() {
+      const m = AHM.simulateModernVitals(state.crewId, sim.hour, data.events);
+      const eva = AHM.activeEva(state.crewId, sim.hour);
+      document.getElementById('a-modern-grid').innerHTML = [
+        metricTile('SpO2', m.spo2.toFixed(1), '%', 'NOMINAL'),
+        metricTile('Skin temp', m.skinTemp.toFixed(1), '\u00b0C', 'NOMINAL'),
+        metricTile('Systolic BP (est.)', Math.round(m.systolicBp), 'mmHg', m.systolicBp > 140 ? 'ATTENTION' : 'NOMINAL'),
+        metricTile('Sleep quality', Math.round(m.sleepQuality), '%', m.sleepQuality < 50 ? 'CRITICAL' : m.sleepQuality < 75 ? 'ATTENTION' : 'NOMINAL'),
+        metricTile('Activity', m.activity, '', 'NOMINAL'),
+      ].join('');
+
+      const pct = Math.round((m.doseMrad / m.doseEndpointMrad) * 100);
+      document.getElementById('a-dose-bar').innerHTML = `
+        <div class="dose-bar__head"><span>Radiation dose (accumulating)</span><span class="mono">${m.doseMrad.toFixed(0)} / ${m.doseEndpointMrad} mrad</span></div>
+        <div class="dose-bar__track"><div class="dose-bar__fill" style="width:${pct}%"></div></div>`;
+
+      document.getElementById('a-modern-footnote').innerHTML =
+        `Simulated with modern Bio-Monitor-style parameters (${data.modern.bio_monitor.parameters.length} signals: ECG, respiration, SpO2, skin temp, BP estimate, activity, sleep). ` +
+        `Apollo's cabin was 100% oxygen, so a modern oximeter would read near the top of the scale all mission &mdash; Irwin's real problem was rhythm, not oxygenation, and no SpO2 number would have caught it. ` +
+        `Sleep score follows the real displaced-sleep events (${m.sleepSource}). Radiation endpoints are real (Mission Report); the curve is estimated, since Apollo dosimeters were read only after landing` +
+        (state.crewId === 'CMP' ? ' (Worden handed his personal dosimeter to Scott, so 300 mrad is the crew passive average).' : '.') +
+        (eva ? ` Currently on ${eva.label}.` : '');
+    }
+
+    function renderContext() {
+      const sans = data.modern.sans;
+      document.getElementById('a-sans-panel').innerHTML =
+        `<p style="color:var(--text);">About 1 in 3 astronauts on long-duration ISS missions show at least one ocular finding (optic disc edema, globe flattening, choroidal folds, hyperopic shift).</p>` +
+        `<p>Apollo 15 lasted 12.3 days, far too short for SANS to develop, so it is not modeled here &mdash; it's the kind of <strong>duration-dependent risk</strong> that a monitoring system for Artemis- and Mars-length missions must track. Watched today with ${sans.monitored_today_with.toLowerCase()}.</p>` +
+        `<div class="event-item__source">${sans.source}</div>`;
+      const bhp = data.modern.behavioral_health;
+      document.getElementById('a-bhp-panel').innerHTML =
+        `<p style="color:var(--text);">Modern crews are tracked on fatigue, workload and wellbeing through private weekly conferences with a flight surgeon and dedicated software (${bhp.example_tool}).</p>` +
+        `<p>The Wellbeing Check-In slider in this app is a teaching simplification of that, not a real instrument. Apollo 15's own record shows why it matters: three lunar-surface sleep periods displaced by roughly 2, 2 and 7 hours, then about 22 hours awake before the cardiac event.</p>` +
+        `<div class="event-item__source">${bhp.source}</div>`;
     }
 
     function renderTimeline(crew) {
@@ -313,6 +352,7 @@
 
       renderCrewRoster(perCrew);
       renderEnvironment();
+      renderThenNow();
       renderCrewDetail(perCrew);
       renderAlerts(allAlerts);
       renderHistory();
@@ -340,6 +380,36 @@
       ].join('');
       document.getElementById('m-env-footnote').textContent = hw.cabin_atmosphere.source + '. ' + hw.cabin_atmosphere.note;
     }
+
+    function renderThenNow() {
+      const rows = [
+        ['Heart rate', 'ECG', '3-lead ECG'],
+        ['Respiration', 'Impedance pneumogram', 'Thoracic + abdominal bands'],
+        ['Blood oxygen (SpO2)', '\u2014', 'Forehead SpO2 sensor'],
+        ['Skin temperature', '\u2014', 'Skin-contact sensor'],
+        ['Blood pressure', '\u2014', 'Continuous systolic estimate'],
+        ['Physical activity', '\u2014', '3-axis accelerometer'],
+        ['Sleep quality', 'Crew report only', 'Derived from sensors'],
+        ['Radiation dose', 'Passive, read after landing', 'Continuous area + personal dosimetry'],
+        ['Cabin CO2', 'LiOH canisters; no telemetry located', 'Real-time ppCO2 with symptom bands'],
+      ];
+      document.querySelector('#m-then-now tbody').innerHTML = rows.map(([p, a, t]) =>
+        `<tr><td>${p}</td><td class="${a === '\u2014' ? 'cell-none' : ''}">${a}</td><td class="cell-now">${t}</td></tr>`).join('');
+    }
+
+    const co2Slider = document.getElementById('m-co2-slider');
+    function renderCo2Explorer() {
+      const v = Number(co2Slider.value);
+      const band = AHM.co2Band(data.modern.co2_operational_bands_mmhg.bands, v);
+      document.getElementById('m-co2-value').textContent = v.toFixed(1) + ' mmHg';
+      const level = v < 2.3 ? 'nominal' : v < 3.0 ? 'attention' : 'critical';
+      document.getElementById('m-co2-effect').innerHTML =
+        `<span class="pill pill--${level}"><span class="dot dot--${level}"></span>${level.toUpperCase()}</span> <span style="margin-left:8px;">${band.effect}</span>`;
+      document.getElementById('m-co2-footnote').textContent =
+        data.modern.co2_operational_bands_mmhg.source + '. NASA-STD-3001 design limit: 3.0 mmHg (1-hour average). Not an Apollo 15 measurement.';
+    }
+    co2Slider.addEventListener('input', renderCo2Explorer);
+    renderCo2Explorer();
 
     function renderCrewDetail(perCrew) {
       const entry = perCrew.find((p) => p.crew.id === state.selectedCrewId) || perCrew[0];
