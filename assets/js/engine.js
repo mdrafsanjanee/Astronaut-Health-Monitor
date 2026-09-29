@@ -74,6 +74,22 @@ const ENGINE = (() => {
   function eventsUpTo(hour) { return AHM.eventsUpTo(DATA.events, hour); }
   function recentEvents(hour, n) { return eventsUpTo(hour).slice(-n).reverse(); }
 
+  // Most recent crew self-check-in (from the demo log) within 24 GET-hours before `hour`.
+  const latestCheckin = (hour) => AHM.readDemoLog().filter((e) => e.type === 'checkin' && e.get_hours <= hour && hour - e.get_hours <= 24).pop() || null;
+
+  // Rule-based decision support: active alerts + latest self-report -> onboard actions (no ground link needed).
+  function advise(s, ci) {
+    const out = [], tired = ci && ci.fatigue >= 4;
+    if (s.assess.alerts.some((a) => /arrhythmia/i.test(a.title)))
+      out.push(tired ? 'Rhythm irregularity + fatigue: begin a rest cycle, defer EVA and strenuous work, repeat ECG in 2 h.'
+                     : 'Rhythm irregularity: repeat ECG, limit exertion, review potassium/electrolyte intake.');
+    if (tired && s.modern.sleepQuality < 70) out.push('Fatigue + poor recent sleep: protect the next sleep period, defer non-critical tasks.');
+    if (ci && ci.mood <= 2) out.push('Low mood reported: schedule a private call or crew debrief.');
+    if (ci && ci.symptoms) out.push('Symptom logged: recheck vitals in 1 h; escalate if it persists or worsens.');
+    if (ci && ci.dose != null && ci.dose > s.modern.doseMrad * 0.01 * 1.5) out.push('Dosimeter above modeled accumulation: re-read it and move to the most shielded area if the rate is rising.');
+    return out;
+  }
+
   const EVENT_TAG_LABEL = {
     milestone: 'Milestone', eva: 'EVA', sleep: 'Sleep', medical: 'Medical',
     'mission-control-decision': 'MCC decision', postflight: 'Postflight',
@@ -82,6 +98,6 @@ const ENGINE = (() => {
   return {
     DATA, CREW, CREW_ROWS, TOTAL_HOURS, VREF,
     crewShortName, healthScore, scoreCopy, boneDensityPct, missionDay, missionTotalDays,
-    crewSnapshot, allCrewSnapshots, series, avg, eventsUpTo, recentEvents, EVENT_TAG_LABEL,
+    crewSnapshot, allCrewSnapshots, latestCheckin, advise, series, avg, eventsUpTo, recentEvents, EVENT_TAG_LABEL,
   };
 })();

@@ -203,20 +203,20 @@ Astronaut-Health-Monitor/
 │   ├── modern-monitoring.json  Current Bio-Monitor parameters, CO2 bands,
 │   │                           radiation, SANS, BHP (cited)
 │   └── data.js                 AUTO-GENERATED embed of the four files
-│                                above (see tools/build_data_js.py — this
+│                                above (see tools/build-data.js — this
 │                                is what lets the app run via file://
 │                                with no server)
 │
 ├── tools/
-│   ├── generate_telemetry.py  Regenerates telemetry.csv from the real
+│   ├── generate-telemetry.js  Regenerates telemetry.csv from the real
 │   │                          anchor points (edit ANCHORS to adjust)
-│   └── build_data_js.py       Regenerates data/data.js from the CSV/JSON
+│   └── build-data.js          Regenerates data/data.js from the CSV/JSON
 │
 └── README.md
 ```
 
 **If you edit any `data/*.json` or `data/telemetry.csv` by hand,**
-re-run `python3 tools/build_data_js.py` from the `tools/` folder
+re-run `node tools/build-data.js`
 afterward so `data.js` picks up your changes.
 
 ## Primary data sources

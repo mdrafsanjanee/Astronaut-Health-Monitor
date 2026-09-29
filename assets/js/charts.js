@@ -5,7 +5,7 @@
 
    Supports marking specific points as "reported" (a real, cited figure
    from the Apollo 15 Mission Report) vs. the default interpolated line —
-   see the design note in tools/generate_telemetry.py for why that
+   see the design note in tools/generate-telemetry.js for why that
    distinction matters here.
    ========================================================================== */
 

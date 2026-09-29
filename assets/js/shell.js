@@ -16,7 +16,7 @@
   const fmt1 = (n) => (Math.round(n * 10) / 10).toFixed(1);
   const fmt0 = (n) => Math.round(n).toString();
 
-  const astronautNav = [['Dashboard', 'home'], ['Health Status', 'heart'], ['Activity', 'activity'], ['Sleep', 'moon'], ['Radiation', 'orbit'], ['Reports', 'report'], ['Settings', 'settings']];
+  const astronautNav = [['Dashboard', 'home'], ['Health Status', 'heart'], ['Activity', 'activity'], ['Sleep', 'moon'], ['Radiation', 'orbit'], ['Check-in', 'check'], ['Reports', 'report'], ['Settings', 'settings']];
   const controlNav = [['Dashboard', 'home'], ['Crew Monitoring', 'crew'], ['Health Analytics', 'activity'], ['Mission Status', 'orbit'], ['Alerts', 'alert'], ['Reports', 'report'], ['Settings', 'settings']];
   const slug = (label) => label.toLowerCase().replaceAll(' ', '-');
 
@@ -331,11 +331,47 @@
         ${MetricCard({ label: 'Bone Density', value: `${fmt1(ENGINE.boneDensityPct(sim.hour))}%`, unit: 'MODELED', icon: 'activity', status: ENGINE.boneDensityPct(sim.hour) < -1 ? 'warn' : 'good', change: 'Endpoint real: −4% by splashdown' })}
         ${MetricCard({ label: 'Respiration Rate', value: fmt1(s.assess.row.respiration_rate), unit: 'br/min', icon: 'bolt', status: s.assess.rrLevel === 'NOMINAL' ? 'good' : 'warn', change: s.assess.row.respiration_basis })}
       </section>
+      ${DecisionSupport(s)}
       <section class="dashboard-bottom">
         ${ChartCard({ label: 'Heart Rate — last 48h', meta: `AVG ${fmt0(ENGINE.avg(hrSeries))} BPM`, body: LineChart({ color: 'cyan', points: hrSeries, eva: AHM.EVA_WINDOWS }) })}
         ${ChartCard({ label: 'Respiration — last 48h', meta: `AVG ${fmt1(ENGINE.avg(rrSeries))} br/min`, body: LineChart({ color: 'teal', points: rrSeries, eva: AHM.EVA_WINDOWS }) })}
         ${AlertSummaryCard()}
       </section>`;
+  }
+
+  const isArrhythmia = (s) => s.assess.alerts.some((a) => /arrhythmia/i.test(a.title));
+
+  // Autonomy layer: latency argument (only during the cardiac event) + rule-based suggested actions.
+  function DecisionSupport(s) {
+    const acts = ENGINE.advise(s, ENGINE.latestCheckin(sim.hour));
+    const banner = (cls, icon, kicker, body) => `<div class="insight-banner ${cls}"><div class="insight-icon">${I(icon)}</div><div><span>${kicker}</span><strong>${body}</strong></div></div>`;
+    return (isArrhythmia(s) ? banner('', 'orbit', 'WHY ONBOARD DECISION SUPPORT',
+        'Houston was ~1.3 s away for this call, so flight surgeons could weigh in live. A Mars crew facing the same event would wait up to ~22 min each way and have to decide alone.') : '')
+      + banner(acts.length ? 'is-message' : '', 'spark', 'SUGGESTED ACTION · ONBOARD RULES',
+        acts.length ? acts.map(esc).join('<br>') : 'No action needed. Vitals and check-ins are within range.');
+  }
+
+  // Duration-dependent risks a 12-day replay can't show: stated qualitatively, no invented data.
+  function LimitsCard() {
+    const rows = [['SANS (eye/brain pressure)', 'Builds over months; about 1 in 3 long-duration ISS astronauts show a finding. Not plausible in 12 days.'],
+      ['Bone loss', 'Only the real Apollo endpoint (about −4%) is shown; the curve is modeled, and multi-month loss is far larger.'],
+      ['Immune dysregulation', 'Needs weeks to months of exposure and lab work; Apollo 15 has no usable in-flight record.'],
+      ['Isolation and confinement', 'Psychological effects grow with duration; a 12-day mission with a 1.3 s link barely tests them.']];
+    return `<div class="card timeline-card"><div class="card-head"><div><span class="card-kicker">SCOPE OF THIS REPLAY</span><strong>Beyond 13 days: risks this dataset cannot show</strong></div></div>
+      ${rows.map(([t, d]) => `<div class="progress-row"><div><strong>${t}</strong><span>${d}</span></div></div>`).join('')}</div>`;
+  }
+
+  // Crew self-report (symptoms, mood, dosimeter). Saved to the demo log, kept apart from the real event record.
+  function CheckinPage() {
+    const rows = AHM.readDemoLog().filter((e) => e.type === 'checkin').slice(-5).reverse();
+    const slider = (f, label) => `<div class="slider-row"><span>${label}</span><input type="range" min="1" max="5" value="3" data-f="${f}"><span class="val">3</span></div>`;
+    return `<div class="card composer"><div class="card-head"><div><span class="card-kicker">SELF-REPORT · GET ${AHM.formatGet(sim.hour)}</span><strong>Crew check-in</strong></div></div>
+        ${slider('mood', 'Mood (1 low – 5 high)')}${slider('fatigue', 'Fatigue (1–5)')}
+        <div class="field"><span>Symptoms (optional)</span><textarea id="ci-sym" placeholder="e.g. palpitations, headache, nausea"></textarea></div>
+        <div class="field"><span>Dosimeter reading (mSv, optional)</span><input id="ci-dose" type="number" min="0" step="0.1"></div>
+        <button class="btn primary" id="ci-save" type="button">${I('check', 14)} Log check-in</button></div>
+      <div class="card timeline-card"><div class="card-head"><div><span class="card-kicker">HISTORY</span><strong>Recent check-ins</strong></div></div>
+        ${rows.map((e) => `<div class="timeline-item"><small>GET ${AHM.formatGet(e.get_hours)}</small><strong>Mood ${e.mood}/5 · Fatigue ${e.fatigue}/5${e.dose != null ? ` · ${e.dose} mSv` : ''}</strong>${e.symptoms ? `<span>${esc(e.symptoms)}</span>` : ''}</div>`).join('') || '<div class="empty">No check-ins logged yet.</div>'}</div>`;
   }
 
   function AlertSummaryCard() {
@@ -441,7 +477,8 @@
         </div>
         ${ChartCard({ label: d.chartTitle, meta: 'REAL DATA', body: chartBody })}
       </section>
-      ${HistoryTimeline(page)}`;
+      ${HistoryTimeline(page)}
+      ${page === 'health-status' ? DecisionSupport(s) + LimitsCard() : ''}`;
   }
 
   function HistoryTimeline(page) {
@@ -504,6 +541,7 @@
 
   function AstronautPage(page) {
     if (page === 'dashboard') return AstronautDashboard();
+    if (page === 'check-in') return CheckinPage();
     if (page === 'reports') return ReportsPage(false);
     if (page === 'settings') return SettingsPage(false);
     return MetricDetailPage(ASTRO_DETAIL[page] ? page : 'health-status');
@@ -671,7 +709,7 @@
     const body = document.getElementById('page-body');
     const readout = document.getElementById('sim-readout');
     if (readout) readout.textContent = AHM.formatGet(sim.hour);
-    if (body) { body.innerHTML = pageRouter(r.role, r.page); AHM_ICONS.hydrate(body); }
+    if (body && r.page !== 'check-in') { body.innerHTML = pageRouter(r.role, r.page); AHM_ICONS.hydrate(body); }
     const range = document.getElementById('sim-range');
     if (range && document.activeElement !== range) range.value = sim.hour;
     const playBtn = document.getElementById('sim-play');
@@ -732,6 +770,14 @@
       const exportBtn = document.getElementById('btn-export');
       if (exportBtn) exportBtn.addEventListener('click', () => window.print());
       wireSimBar();
+      root.querySelectorAll('.slider-row input').forEach((i) => i.addEventListener('input', () => { i.nextElementSibling.textContent = i.value; }));
+      const save = document.getElementById('ci-save');
+      if (save) save.addEventListener('click', () => {
+        const v = (f) => Number(root.querySelector(`[data-f="${f}"]`).value), dose = document.getElementById('ci-dose').value;
+        AHM.logDemoEvent({ type: 'checkin', crewId: ASTRO_CREW_DEFAULT, get_hours: sim.hour, mood: v('mood'), fatigue: v('fatigue'),
+          symptoms: document.getElementById('ci-sym').value.trim(), dose: dose === '' ? null : Number(dose) });
+        render();
+      });
     }
   }
 
