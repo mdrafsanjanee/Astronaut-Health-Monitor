@@ -3,123 +3,22 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Astronaut Health Monitor — Apollo 15 Replay | NASA Space Apps 2026</title>
+<title>Astronomican — Apollo 15 Health Monitor Replay | NASA Space Apps 2026</title>
 <meta name="description" content="A real-data astronaut health monitoring and mission-control prototype, replaying Apollo 15's actual biomedical record. Built for the NASA Space Apps Challenge 2026." />
-<link rel="stylesheet" href="assets/css/theme.css" />
-<link rel="stylesheet" href="assets/css/pages.css" />
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="assets/css/style.css" />
+<link rel="stylesheet" href="assets/css/extras.css" />
 </head>
 <body>
+<div id="app"></div>
 
-<nav class="site-nav">
-  <div class="site-nav__brand">
-    <span class="site-nav__mark">A15</span>
-    <span>Apollo 15 Health Monitor</span>
-  </div>
-  <button class="site-nav__toggle" aria-label="Toggle menu">
-    <span></span><span></span><span></span>
-  </button>
-  <div class="site-nav__links">
-    <a href="index.html" data-page="home" aria-current="page">Overview</a>
-    <a href="console.html#astronaut" data-page="astronaut">Astronaut Interface</a>
-    <a href="console.html#mission-control" data-page="mission-control">Mission Control</a>
-  </div>
-</nav>
-
-<header class="hero">
-  <div class="hero__stars"></div>
-  <div class="hero__inner">
-    <div class="hero__eyebrow">
-      <span class="dot dot--nominal"></span>
-      NASA SPACE APPS 2026 — PRE-SCREENING PROTOTYPE
-    </div>
-    <h1 class="hero__title">Replaying Apollo 15's real biomedical record</h1>
-    <p class="hero__lede">
-      This isn't a fictional demo. Every event, timestamp, and cited figure
-      here is drawn from NASA's own Apollo 15 Mission Report — including
-      the real cardiac arrhythmia Lunar Module Pilot James Irwin experienced
-      after lunar liftoff, and Mission Control's real decision about it. It's
-      the mission that helped convince NASA it needed better astronaut
-      health monitoring in the first place.
-    </p>
-    <div class="hero__meta">
-      <div class="hero__meta-item">
-        <span class="value mono">295h 12m</span>
-        <span class="label">real mission duration (GET)</span>
-      </div>
-      <div class="hero__meta-item">
-        <span class="value mono">3 crew</span>
-        <span class="label">Scott · Worden · Irwin</span>
-      </div>
-      <div class="hero__meta-item">
-        <span class="value mono">27 events</span>
-        <span class="label">cited to NASA's own mission report</span>
-      </div>
-    </div>
-  </div>
-</header>
-
-<section class="portals">
-  <div class="portals__heading">
-    <h2>Two interfaces, one real mission</h2>
-    <p>Press Simulate to replay Apollo 15 hour by hour, or jump straight to the cardiac event.</p>
-  </div>
-  <div class="portal-grid">
-    <a class="portal-card portal-card--astronaut" href="console.html#astronaut">
-      <div class="portal-card__tag">01 — ON THE MOON</div>
-      <h3>Astronaut Interface</h3>
-      <p>Real heart-rate and respiration telemetry, the mission timeline as it actually happened, and postflight findings (bone density, radiation dose, weight loss) revealed after splashdown.</p>
-      <span class="portal-card__cta">Open dashboard →</span>
-    </a>
-    <a class="portal-card portal-card--mission" href="console.html#mission-control">
-      <div class="portal-card__tag">02 — HOUSTON</div>
-      <h3>Mission Control</h3>
-      <p>Crew status for all three astronauts, the real historical decisions Mission Control made, and an interactive composer to demo how a live recommendation-and-acknowledge workflow would work today.</p>
-      <span class="portal-card__cta">Open console →</span>
-    </a>
-  </div>
-</section>
-
-<section class="about-strip">
-  <div>
-    <h2>The workflow</h2>
-    <div class="workflow">
-      <span class="step">MONITOR</span><span class="arrow">→</span>
-      <span class="step">DETECT</span><span class="arrow">→</span>
-      <span class="step">EXPLAIN</span><span class="arrow">→</span>
-      <span class="step">ACT</span><span class="arrow">→</span>
-      <span class="step">RECORD</span>
-    </div>
-    <p style="margin-top:16px;">
-      Apollo 15's own history walks through every step of this loop for real:
-      Irwin's EKG showed an abnormal rhythm (<strong>monitor</strong>), flight
-      surgeon Dr. Charles Berry recognized it as serious
-      (<strong>detect</strong>), leadership weighed what it meant for the
-      mission (<strong>explain</strong>), Mission Control made a real call
-      about what to do — and what to tell the crew
-      (<strong>act</strong>) — and it's still documented and studied today
-      (<strong>record</strong>). Two corrections worth knowing before you
-      dig in are in the README's "Corrections" section.
-    </p>
-  </div>
-  <div>
-    <h2>Primary data sources</h2>
-    <ul class="source-list">
-      <li>Apollo 15 Mission Report (MSC-07230), NASA, 1971 — Section 10, Biomedical Evaluation.</li>
-      <li>Apollo 15 Activities Timeline, Table 4-I — second-accurate EVA and liftoff timestamps (an.rsl.wustl.edu).</li>
-      <li>Wikipedia, "Return of Apollo 15 to Earth" — the cardiac-event narrative and Mission Control's decision, cross-checked against flight directors' published memoirs.</li>
-      <li>Delp MD, et al., arXiv:2208.00892 — the specific PVC count and GET for Irwin's arrhythmia.</li>
-      <li>NASA SP-368, <em>Biomedical Results of Apollo</em> — Environmental Control System design (cabin atmosphere, CO2 removal).</li>
-    </ul>
-  </div>
-</section>
-
-<footer class="site-footer">
-  Apollo 15 Health Monitor Replay — a NASA Space Apps Challenge 2026 prototype. Real mission data, clearly separated from the interactive demo layer. See README.md for full citations, corrections, and the production-version roadmap.
-</footer>
-
+<!-- data layer: real Apollo 15 dataset -->
+<script src="data/data.js"></script>
 <script src="assets/js/common.js"></script>
-<script>
-  AHM.initNav('home');
-</script>
+<script src="assets/js/engine.js"></script>
+<!-- UI layer: icon set + Figma-styled screens -->
+<script src="assets/js/icons.js"></script>
+<script src="assets/js/shell.js"></script>
 </body>
 </html>
