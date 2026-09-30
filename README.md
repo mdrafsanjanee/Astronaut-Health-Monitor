@@ -22,6 +22,22 @@ From the landing page, open **Astronaut Interface** or **Mission
 Control** — both live inside `console.html` as switchable views sharing
 one script (see "Why one console page, not two" further down).
 
+## Demo login
+
+Open `index.html`, choose a role, then sign in:
+
+| Astronaut ID | Password | Crew member |
+|---|---|---|
+| `crew-1` | `123` | David R. Scott (Commander) |
+| `crew-2` | `123` | Alfred M. Worden (Command Module Pilot) |
+| `crew-3` | `123` | James B. Irwin (Lunar Module Pilot) |
+
+Mission Control accepts any non-empty Operator ID and password. Use **Log out**
+(top bar or bottom of the sidebar) to end the session. Accounts live in the
+`ACCOUNTS` constant at the top of `assets/js/shell.js`; set `SHOW_DEMO_HINT`
+to `false` there to hide the credential hint on the login screen. This is a
+front-end demo gate for a static site, not real authentication.
+
 ## Controls
 
 - **Simulate** — press to auto-advance Ground Elapsed Time (GET) at
@@ -255,8 +271,9 @@ a continuous simulation possible is labeled `estimated` or
 
 ## Design notes
 
-- No frameworks, no build step, no database, no authentication — plain
-  HTML/CSS/JS and CSV/JSON, per the challenge's technology constraints.
+- No frameworks, no build step, no database — plain HTML/CSS/JS and
+  CSV/JSON, per the challenge's technology constraints. Sign-in is a
+  client-side demo only (see "Demo login" above); it is not real security.
 - The status model is **event-driven**, not a bank of numeric
   thresholds — see the design note at the top of `common.js` for why
   that's a more honest fit for real 1971 data (and a deliberate

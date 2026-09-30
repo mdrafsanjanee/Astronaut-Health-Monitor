@@ -21,12 +21,66 @@
   const slug = (label) => label.toLowerCase().replaceAll(' ', '-');
 
   /* ------------------------------------------------------------------ *
+   * Accounts + session (demo-grade, client-side only)
+   * crew-1 / crew-2 / crew-3 map to the three real Apollo 15 crew members.
+   * Change passwords here. Set SHOW_DEMO_HINT = false to hide the
+   * "Need access?" demo-credential hint on the login screen.
+   * ------------------------------------------------------------------ */
+
+  const ACCOUNTS = {
+    'crew-1': { password: '123', crewId: 'CDR' },   // David R. Scott
+    'crew-2': { password: '123', crewId: 'CMP' },   // Alfred M. Worden
+    'crew-3': { password: '123', crewId: 'LMP' },   // James B. Irwin
+  };
+  const SHOW_DEMO_HINT = true;
+  const SESSION_KEY = 'ahm.session';
+  let session = null;
+  try { session = JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch (e) { session = null; }
+  function saveSession(next) {
+    session = next;
+    try { if (next) sessionStorage.setItem(SESSION_KEY, JSON.stringify(next)); else sessionStorage.removeItem(SESSION_KEY); } catch (e) { /* storage blocked: in-memory only */ }
+  }
+  const myCrew = () => (session && session.crewId) || 'LMP';
+  const myCrewMember = () => ENGINE.CREW.find((c) => c.id === myCrew()) || ENGINE.CREW[2];
+
+  // Small UI state that must survive the live re-renders while the replay runs.
+  let trail = [];               // app pages visited this session (drives the Back button)
+  let flash = '';               // one-shot message on the login screen (e.g. after log out)
+  let alertFilter = 'all';
+  let crewSort = 'default';
+  let analyticsCrew = 'all';
+  let reportCat = 'All';
+  const reviewed = new Set();
+  const toggles = {};
+
+  function toast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) { t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  function downloadFile(name, text, type) {
+    const url = URL.createObjectURL(new Blob([text], { type: `${type};charset=utf-8` }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  /* ------------------------------------------------------------------ *
    * Shared state: route + the GET replay clock
    * ------------------------------------------------------------------ */
 
   const TOTAL_HOURS = ENGINE.TOTAL_HOURS;
   const sim = { hour: 0, playing: false, timer: null, speed: 8 };            // 8 GET-hours per real second
   const TICK_MS = 200;
+
+  const visibleEvents = (role) => role === 'control' ? ENGINE.DATA.events : ENGINE.DATA.events.filter((e) => !e.crew_id || e.crew_id === myCrew());
+  const eventsSoFar = (role) => visibleEvents(role).filter((e) => e.get_hours <= sim.hour);
+  const activeNotices = (role) => visibleEvents(role).filter((e) => e.severity && sim.hour >= e.get_hours && sim.hour <= (e.active_until_hours ?? e.get_hours + 3));
 
   function parseHash() {
     const h = (location.hash || '#role').slice(1);
@@ -52,8 +106,10 @@
     </div>`;
   }
 
-  function BackButton(disabled) {
-    return `<button class="btn back-btn" id="btn-back" ${disabled ? 'disabled' : ''} type="button">${I('arrow')}Back</button>`;
+  // `hidden` renders an empty spacer instead of a dead/disabled button (keeps the header grid aligned).
+  function BackButton(hidden) {
+    if (hidden) return '<span class="back-spacer" aria-hidden="true"></span>';
+    return `<button class="btn back-btn" data-act="back" type="button">${I('arrow')}Back</button>`;
   }
 
   function Breadcrumb(items) {
@@ -125,7 +181,7 @@
 
   function tplRoleSelect() {
     const roleCard = (active, bullets, icon, label, title, code) => `
-      <button class="role-card ${active ? 'active' : ''}" data-role="${label === 'ASTRONAUT' ? 'astronaut' : 'control'}" type="button">
+      <button class="role-card ${active ? 'active' : ''}" aria-pressed="${active ? 'true' : 'false'}" data-role="${label === 'ASTRONAUT' ? 'astronaut' : 'control'}" type="button">
         <div class="role-card-top"><div class="role-icon">${I(icon, 28)}</div><span class="role-code">${label}</span><span class="radio-indicator">${active ? '<span></span>' : ''}</span></div>
         <div class="role-title">${title}</div>
         <div class="role-rule"></div>
@@ -192,6 +248,10 @@
 
   function tplLogin(role) {
     const isA = role === 'astronaut';
+    const notice = flash; flash = '';
+    const help = isA
+      ? `Crew accounts are issued by flight operations.${SHOW_DEMO_HINT ? ' Demo accounts: <strong>crew-1</strong> (Scott), <strong>crew-2</strong> (Worden), <strong>crew-3</strong> (Irwin) — password <strong>123</strong>.' : ''}`
+      : 'Operator accounts are issued by flight operations. In this replay, any Operator ID and password will work.';
     return `<main class="entry-screen login-screen">
       <div class="starfield"></div>
       <header class="entry-header">${BackButton(false)}${Brand()}<div class="system-status"><span class="status-dot"></span>ENCRYPTED CONNECTION</div></header>
@@ -204,17 +264,20 @@
           <div class="visual-data data-a">GET ${AHM.formatGet(sim.hour)}</div>
           <div class="visual-data data-b">LINK STABLE</div>
         </div>
-        <form class="login-panel" id="login-form">
+        <form class="login-panel" id="login-form" novalidate>
           <div class="eyebrow">${isA ? 'CREW IDENTITY VERIFICATION' : 'OPERATIONS AUTHORIZATION'}</div>
           <div class="login-title">${isA ? 'Astronaut' : 'Mission Control'} Login</div>
           <p>Enter your secure credentials to access the Astronomican health network.</p>
+          ${notice ? `<div class="login-flash" role="status">${I('check', 14)}<span>${esc(notice)}</span></div>` : ''}
           <div class="form-stack">
-            <label class="field"><span>${isA ? 'Astronaut ID' : 'Operator ID'}</span><input placeholder="${isA ? 'AST-2049' : 'MCO-7741'}" type="text"></label>
-            <label class="field"><span>Password</span><input placeholder="Enter secure password" type="password"></label>
+            <label class="field"><span>${isA ? 'Astronaut ID' : 'Operator ID'}</span><input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="${isA ? 'crew-1' : 'MCO-7741'}" type="text" required></label>
+            <label class="field"><span>Password</span><input name="password" autocomplete="current-password" placeholder="Enter secure password" type="password" required></label>
           </div>
-          <div class="login-options"><span><span class="status-dot"></span>Biometric verification ready</span><span>Need access?</span></div>
+          <div class="login-error" id="login-error" role="alert" hidden></div>
+          <div class="login-options"><span><span class="status-dot"></span>Biometric verification ready</span><button class="link-btn" data-act="need-access" type="button">Need access?</button></div>
+          <div class="login-note" id="login-help" hidden>${help}</div>
           <button class="btn primary login-submit" type="submit">Authenticate &amp; Enter${I('arrow')}</button>
-          <button class="btn secondary login-back" id="btn-login-back" type="button">${I('arrow')}Back to role selection</button>
+          <button class="btn secondary login-back" data-act="back" type="button">${I('arrow')}Back to role selection</button>
           <div class="security-note">${I('shield')}<span>256-bit secure mission network<br>Session monitored by flight operations</span></div>
         </form>
       </section>
@@ -247,9 +310,9 @@
 
   function tplShell(role, page) {
     const nav = role === 'astronaut' ? astronautNav : controlNav;
-    const title = (nav.find(([l]) => slug(l) === page) || nav[0])[0];
-    const station = role === 'astronaut' ? ENGINE.crewSnapshot('LMP', sim.hour) : null; // logged-in astronaut = Irwin, the mission's documented case
-    const openAlerts = ENGINE.DATA.events.filter((e) => e.severity && sim.hour >= e.get_hours && sim.hour <= (e.active_until_hours ?? e.get_hours + 3)).length;
+    const title = (nav.find(([l]) => slug(l) === page) || (page === 'alerts' ? ['Alerts'] : nav[0]))[0];
+    const me = myCrewMember();
+    const openAlerts = activeNotices(role).length;
     return `<main class="app-shell">
       <aside class="sidebar">
         ${Brand()}
@@ -265,17 +328,19 @@
         </div>
         <div class="side-user">
           <div class="avatar">${I('user')}</div>
-          <div><strong>${role === 'astronaut' ? 'James B. Irwin' : 'Flight Director'}</strong><span>${role === 'astronaut' ? 'Lunar Module Pilot' : 'Mission Control, Houston'}</span></div>
+          <div><strong>${role === 'astronaut' ? esc(me.name) : 'Flight Director'}</strong><span>${role === 'astronaut' ? esc(me.role) : 'Mission Control, Houston'}</span></div>
           <span class="status-dot"></span>
         </div>
+        <button class="btn secondary side-logout" data-act="logout" type="button">${I('logout', 15)}<span>Log out</span></button>
       </aside>
       <section class="workspace">
         <header class="topbar">
-          <div>${BackButton(false)}${Breadcrumb([role === 'astronaut' ? 'Astronaut' : 'Mission Control', title])}</div>
+          <div>${BackButton(trail.length < 2)}${Breadcrumb([role === 'astronaut' ? 'Astronaut' : 'Mission Control', title])}</div>
           <div class="topbar-actions">
             <div class="sync-status"><span class="status-dot ${sim.playing ? 'live' : ''}"></span> ${sim.playing ? 'REPLAYING' : 'PAUSED'} <strong>GET ${AHM.formatGet(sim.hour)}</strong></div>
-            <button class="btn icon-btn" data-nav="${role}-alerts" type="button">${I('alert')}${openAlerts ? '<span class="notification-ping"></span>' : ''}</button>
-            <button class="btn icon-btn" data-nav="${role}-settings" type="button">${I('settings')}</button>
+            <button class="btn icon-btn" data-nav="${role}-alerts" title="Alerts" aria-label="Alerts${openAlerts ? ` (${openAlerts} active)` : ''}" type="button">${I('alert')}${openAlerts ? '<span class="notification-ping"></span>' : ''}</button>
+            <button class="btn icon-btn" data-nav="${role}-settings" title="Settings" aria-label="Settings" type="button">${I('settings')}</button>
+            <button class="btn logout-btn" data-act="logout" title="Log out" type="button">${I('logout', 15)}<span>Log out</span></button>
           </div>
         </header>
         <div class="workspace-content" id="workspace-content">${tplPageWrap(role, page, title)}</div>
@@ -286,7 +351,7 @@
   function tplPageWrap(role, page, title) {
     return `<div class="page-heading">
         <div><div class="eyebrow">${role === 'astronaut' ? 'PERSONAL HEALTH SYSTEM' : 'MISSION OPERATIONS'} // ${title.toUpperCase()}</div><div class="page-title">${title}</div></div>
-        <div class="page-tools"><span class="range-label">GET REPLAY</span><button class="btn filter-btn" disabled type="button">Apollo 15 · full mission</button><button class="btn export-btn" id="btn-export" type="button">${I('download')} Export</button></div>
+        <div class="page-tools"><span class="range-label">GET REPLAY</span><span class="range-chip">Apollo 15 · full mission</span><button class="btn export-btn" data-act="print" title="Print or save this page as PDF" type="button">${I('download')} Export</button></div>
       </div>
       ${usesSimBar(page) ? tplSimBar() : ''}
       <div id="page-body">${pageRouter(role, page)}</div>`;
@@ -296,14 +361,13 @@
    * Astronaut pages
    * ------------------------------------------------------------------ */
 
-  const ASTRO_CREW_DEFAULT = 'LMP';
 
   function AstronautDashboard() {
-    const s = ENGINE.crewSnapshot(ASTRO_CREW_DEFAULT, sim.hour);
+    const s = ENGINE.crewSnapshot(myCrew(), sim.hour);
     const [title, copy] = ENGINE.scoreCopy(s.score);
-    const alerts = ENGINE.DATA.events.filter((e) => e.severity && sim.hour >= e.get_hours && sim.hour <= (e.active_until_hours ?? e.get_hours + 3));
-    const hrSeries = ENGINE.series(ASTRO_CREW_DEFAULT, sim.hour, 48, 'heart_rate_bpm');
-    const rrSeries = ENGINE.series(ASTRO_CREW_DEFAULT, sim.hour, 48, 'respiration_rate');
+    const alerts = activeNotices('astronaut');
+    const hrSeries = ENGINE.series(myCrew(), sim.hour, 48, 'heart_rate_bpm');
+    const rrSeries = ENGINE.series(myCrew(), sim.hour, 48, 'respiration_rate');
     const tone = s.score >= 90 ? 'good' : s.score >= 75 ? '' : s.score >= 55 ? 'is-warn' : 'is-danger';
     return `<section class="hero-grid">
         <div class="card health-hero ${tone}">
@@ -322,7 +386,7 @@
           <div class="mission-bar"><span style="width:${Math.min(100, sim.hour / TOTAL_HOURS * 100).toFixed(1)}%"></span></div>
         </div>
       </section>
-      <div class="section-title"><span>LIVE VITALS — JAMES B. IRWIN (LMP)</span><small>GET ${AHM.formatGet(sim.hour)}</small></div>
+      <div class="section-title"><span>LIVE VITALS — ${esc(myCrewMember().name.toUpperCase())} (${myCrew()})</span><small>GET ${AHM.formatGet(sim.hour)}</small></div>
       <section class="metric-grid six">
         ${MetricCard({ label: 'Heart Rate', value: fmt0(s.assess.row.heart_rate_bpm), unit: 'BPM', icon: 'heart', status: s.assess.hrLevel === 'NOMINAL' ? 'good' : s.assess.hrLevel === 'ATTENTION' ? 'warn' : 'danger', change: s.assess.eva ? 'EVA exertion — expected' : `${s.assess.row.heart_rate_basis}` })}
         ${MetricCard({ label: 'Blood Pressure (est.)', value: `${fmt0(s.modern.systolicBp)}/${fmt0(s.modern.systolicBp - 40)}`, unit: 'mmHg', icon: 'activity', status: 'good', change: 'Modern-monitor estimate' })}
@@ -343,7 +407,7 @@
 
   // Autonomy layer: latency argument (only during the cardiac event) + rule-based suggested actions.
   function DecisionSupport(s) {
-    const acts = ENGINE.advise(s, ENGINE.latestCheckin(sim.hour));
+    const acts = ENGINE.advise(s, ENGINE.latestCheckin(sim.hour, myCrew()));
     const banner = (cls, icon, kicker, body) => `<div class="insight-banner ${cls}"><div class="insight-icon">${I(icon)}</div><div><span>${kicker}</span><strong>${body}</strong></div></div>`;
     return (isArrhythmia(s) ? banner('', 'orbit', 'WHY ONBOARD DECISION SUPPORT',
         'Houston was ~1.3 s away for this call, so flight surgeons could weigh in live. A Mars crew facing the same event would wait up to ~22 min each way and have to decide alone.') : '')
@@ -363,7 +427,7 @@
 
   // Crew self-report (symptoms, mood, dosimeter). Saved to the demo log, kept apart from the real event record.
   function CheckinPage() {
-    const rows = AHM.readDemoLog().filter((e) => e.type === 'checkin').slice(-5).reverse();
+    const rows = AHM.readDemoLog().filter((e) => e.type === 'checkin' && (!e.crewId || e.crewId === myCrew())).slice(-5).reverse();
     const slider = (f, label) => `<div class="slider-row"><span>${label}</span><input type="range" min="1" max="5" value="3" data-f="${f}"><span class="val">3</span></div>`;
     return `<div class="card composer"><div class="card-head"><div><span class="card-kicker">SELF-REPORT · GET ${AHM.formatGet(sim.hour)}</span><strong>Crew check-in</strong></div></div>
         ${slider('mood', 'Mood (1 low – 5 high)')}${slider('fatigue', 'Fatigue (1–5)')}
@@ -375,11 +439,11 @@
   }
 
   function AlertSummaryCard() {
-    const items = ENGINE.recentEvents(sim.hour, 4);
+    const items = eventsSoFar('astronaut').slice(-4).reverse();
     const iconFor = (cat) => ({ medical: 'alert', eva: 'orbit', 'mission-control-decision': 'crew', milestone: 'spark', sleep: 'moon', postflight: 'check' }[cat] || 'spark');
     const toneFor = (e) => e.severity === 'CRITICAL' ? 'warning' : e.severity === 'ATTENTION' ? 'warning' : e.category === 'medical' ? 'warning' : 'info';
     return `<div class="card alert-summary">
-      <div class="card-head"><div><span class="card-kicker">SYSTEM FEED</span><strong>Real Mission Events</strong></div><span class="alert-count">${ENGINE.eventsUpTo(sim.hour).length}</span></div>
+      <div class="card-head"><div><span class="card-kicker">SYSTEM FEED</span><strong>Real Mission Events</strong></div><span class="alert-count">${eventsSoFar('astronaut').length}</span></div>
       ${items.map((e) => `<div class="alert-item ${toneFor(e)}">${I(iconFor(e.category))}<div><strong>${esc(e.title)}</strong><span>${esc(ENGINE.EVENT_TAG_LABEL[e.category] || e.category)}</span></div><small>${timeAgo(e.get_hours, sim.hour)}</small></div>`).join('') || `<div class="empty">No events yet — GET ${AHM.formatGet(sim.hour)}</div>`}
       <button class="btn text-btn" data-nav="astronaut-health-status" type="button">View full timeline ${I('arrow')}</button>
     </div>`;
@@ -410,16 +474,20 @@
           ['Exertion Level', eva ? 'HIGH (EVA)' : level > 30 ? 'MODERATE' : 'LOW', '', 'activity', 'good'],
           ['Heart Rate', fmt0(s.assess.row.heart_rate_bpm), 'BPM', 'heart', 'good'],
           ['EVA Status', eva ? `ACTIVE — ${eva.label}` : 'NOT IN EVA', '', 'bolt', eva ? 'warn' : 'good'],
-          ['Cumulative EVA Time', fmt1(AHM.EVA_WINDOWS.filter((w) => w.crew.includes(ASTRO_CREW_DEFAULT) && w.start <= s.hour).reduce((sum, w) => sum + (Math.min(w.end, s.hour) - w.start), 0)), 'HOURS', 'orbit', 'good'],
+          ['Cumulative EVA Time', fmt1(AHM.EVA_WINDOWS.filter((w) => w.crew.includes(myCrew()) && w.start <= s.hour).reduce((sum, w) => sum + (Math.min(w.end, s.hour) - w.start), 0)), 'HOURS', 'orbit', 'good'],
         ];
       },
-      sections: (s) => [
-        ['EVA-1: first Moon walk', 'Complete', s.hour >= 126.2 ? 100 : s.hour >= 119.655 ? Math.round((s.hour - 119.655) / (126.2 - 119.655) * 100) : 0, 'cyan'],
-        ['EVA-2: Hadley Rille traverse', 'Complete', s.hour >= 149.45 ? 100 : s.hour >= 142.247 ? Math.round((s.hour - 142.247) / (149.45 - 142.247) * 100) : 0, 'teal'],
-        ['EVA-3: Hadley Delta', 'Complete', s.hour >= 168.134 ? 100 : s.hour >= 163.304 ? Math.round((s.hour - 163.304) / (168.134 - 163.304) * 100) : 0, 'violet'],
-      ],
+      sections: (s) => {
+        const prog = (a, b) => s.hour >= b ? 100 : s.hour >= a ? Math.round((s.hour - a) / (b - a) * 100) : 0;
+        const label = (p) => p >= 100 ? 'Complete' : p > 0 ? 'In progress' : 'Not started';
+        const row = (t, p, c) => [t, label(p), p, c];
+        if (myCrew() === 'CMP') {
+          return [row('Solo lunar-orbit operations (SIM bay)', prog(104.708, 171.623), 'cyan'), row('Deep-space EVA on the return trip', prog(240.85, 241.15), 'violet')];
+        }
+        return [row('EVA-1: first Moon walk', prog(119.655, 126.2), 'cyan'), row('EVA-2: Hadley Rille traverse', prog(142.247, 149.45), 'teal'), row('EVA-3: Hadley Delta', prog(163.304, 168.134), 'violet')];
+      },
       chartTitle: 'Heart Rate During Activity', chartField: 'heart_rate_bpm', chartColor: 'orange',
-      summary: () => `Irwin and Scott drove the Lunar Roving Vehicle ${27.9} km across all three EVAs — the first crewed use of the rover.`,
+      summary: () => myCrew() === 'CMP' ? 'Worden stayed in lunar orbit aboard Endeavour running the SIM-bay instruments, then made the first deep-space EVA on the trip home.' : `Irwin and Scott drove the Lunar Roving Vehicle ${27.9} km across all three EVAs — the first crewed use of the rover.`,
     },
     sleep: {
       metrics: (s) => {
@@ -431,11 +499,8 @@
           ['Source', 'Real crew-reported', '', 'shield', 'good'],
         ];
       },
-      sections: () => [
-        ['1st lunar-surface sleep', 'Shifted ~2h', 78, 'violet'],
-        ['2nd lunar-surface sleep', 'Cut short — O2 leak fix', 62, 'cyan'],
-        ['3rd lunar-surface sleep', 'Shifted ~7h, cut to 6.5h', 54, 'teal'],
-      ],
+      sections: (s) => [['1st lunar-surface sleep', 'Shifted ~2h', 78, 'violet', 107.5], ['2nd lunar-surface sleep', 'Cut short — O2 leak fix', 62, 'cyan', 130], ['3rd lunar-surface sleep', 'Shifted ~7h, cut to 6.5h', 54, 'teal', 155]]
+        .map(([t, v, p, c, at]) => s.hour >= at ? [t, v, p, c] : [t, 'Not reached yet', 0, c]),
       chartTitle: 'Respiration During Rest', chartField: 'respiration_rate', chartColor: 'violet',
       summary: () => 'All three lunar-surface sleep periods were displaced from the planned schedule — documented in the mission timeline, not estimated.',
     },
@@ -462,14 +527,14 @@
 
   function MetricDetailPage(page) {
     const d = ASTRO_DETAIL[page] || ASTRO_DETAIL['health-status'];
-    const s = ENGINE.crewSnapshot(ASTRO_CREW_DEFAULT, sim.hour);
+    const s = ENGINE.crewSnapshot(myCrew(), sim.hour);
     const metrics = d.metrics(s);
     const sections = d.sections(s);
     const chartBody = d.chartField
-      ? LineChart({ color: d.chartTitle.includes('Rate') && page === 'health-status' ? 'cyan' : sections[0][3], points: ENGINE.series(ASTRO_CREW_DEFAULT, sim.hour, 72, d.chartField), eva: AHM.EVA_WINDOWS })
+      ? LineChart({ color: d.chartTitle.includes('Rate') && page === 'health-status' ? 'cyan' : sections[0][3], points: ENGINE.series(myCrew(), sim.hour, 72, d.chartField), eva: AHM.EVA_WINDOWS })
       : LineChart({ color: 'orange', points: Array.from({ length: 20 }, (_, i) => ({ x: i, y: Math.min(1, ((sim.hour / 20) * i) / TOTAL_HOURS) * s.modern.doseEndpointMrad })) });
     return `<div class="insight-banner"><div class="insight-icon">${I('spark')}</div><div><span>ASTRONOMICAN INSIGHT</span><strong>${esc(d.summary(s))}</strong></div>${StatusPill('GET ' + AHM.formatGet(sim.hour), 'good')}</div>
-      <section class="metric-grid four">${metrics.map(([label, value, unit, icon, status]) => MetricCard({ label, value, unit, icon, status, change: 'Within replay baseline' })).join('')}</section>
+      <section class="metric-grid four">${metrics.map(([label, value, unit, icon, status]) => MetricCard({ label, value, unit, icon, status, change: status === 'danger' ? 'Flagged — under review' : status === 'warn' ? 'Outside expected band' : 'Within replay baseline' })).join('')}</section>
       <section class="detail-layout">
         <div class="card detail-sections">
           <div class="card-head"><div><span class="card-kicker">DETAILED METRICS</span><strong>Performance breakdown</strong></div><span class="chart-meta">LIVE</span></div>
@@ -483,7 +548,7 @@
 
   function HistoryTimeline(page) {
     const cats = page === 'health-status' ? ['medical', 'milestone'] : page === 'activity' ? ['eva'] : page === 'sleep' ? ['sleep'] : ['postflight', 'mission-control-decision'];
-    const items = ENGINE.eventsUpTo(sim.hour).filter((e) => cats.includes(e.category)).slice(-5).reverse();
+    const items = eventsSoFar('astronaut').filter((e) => cats.includes(e.category)).slice(-5).reverse();
     return `<div class="card timeline-card">
       <div class="card-head"><div><span class="card-kicker">HISTORY</span><strong>${page === 'health-status' ? 'Health History Timeline' : 'Recent Events'}</strong></div></div>
       <div class="timeline wrap">
@@ -499,7 +564,7 @@
   function reportRows(control) {
     const base = [
       ['Comprehensive Health Summary', 'MED-HLTH-A15', 'Aug 07, 1971', 'Medical', 'Ready'],
-      ['Cardiovascular Assessment — Irwin', 'MED-CARD-A15', 'Aug 07, 1971', 'Health', 'Ready'],
+      [`Cardiovascular Assessment — ${control ? 'Irwin' : ENGINE.crewShortName(myCrewMember())}`, 'MED-CARD-A15', 'Aug 07, 1971', 'Health', 'Ready'],
       ['Apollo 15 Mission Report (MSC-07230)', 'NASA-MSC-07230', 'Sep 1971', 'Mission', 'Ready'],
       ['Radiation Exposure Record (M-078)', 'MED-RAD-A15', 'Aug 1971', 'Safety', 'Archived'],
       ['Postflight Physical Exam Summary', 'MED-WELL-A15', 'Aug 07, 1971', 'Medical', 'Ready'],
@@ -508,34 +573,58 @@
   }
 
   function ReportsPage(control) {
+    const all = reportRows(control);
+    const cats = ['All', ...new Set(all.map((r) => r[3]))];
+    const cat = cats.includes(reportCat) ? reportCat : 'All';
+    const rows = all.filter((r) => cat === 'All' || r[3] === cat);
     const stats = [
       [control ? 'Crew Reports' : 'Health Reports', '5', 'report'],
       ['Mission Reports', ENGINE.DATA.events.length.toString(), 'orbit'],
       [control ? 'Performance Reports' : 'PDF Reports', '3', 'activity'],
       ['Cited Sources', '5+', 'download'],
     ];
+    const cols = 'grid-template-columns:2.2fr 1fr 1fr .9fr .8fr 30px;';
     return `<section class="report-stats">${stats.map(([label, value, icon]) => `<div class="card report-stat"><div class="metric-icon good">${I(icon)}</div><div><span>${esc(label)}</span><strong>${esc(value)}</strong><small>FILES</small></div></div>`).join('')}</section>
       <div class="card reports-table">
-        <div class="table-toolbar"><div><span class="card-kicker">DOCUMENT CENTER</span><strong>${control ? 'Mission & Crew Reports' : 'Health & Mission Reports'}</strong></div><div><button class="btn filter-btn" type="button">All categories</button><button class="btn primary compact" type="button">${I('download')} Export summary</button></div></div>
+        <div class="table-toolbar"><div><span class="card-kicker">DOCUMENT CENTER</span><strong>${control ? 'Mission & Crew Reports' : 'Health & Mission Reports'}</strong></div><div>
+          <select class="select-ctl" data-change="report-cat" aria-label="Filter reports by category">${cats.map((c) => `<option value="${esc(c)}"${c === cat ? ' selected' : ''}>${c === 'All' ? 'All categories' : esc(c)}</option>`).join('')}</select>
+          <button class="btn primary compact" data-act="export-csv" type="button">${I('download')} Export summary</button></div></div>
         <div class="table-scroll"><div class="data-table">
-          <div class="table-row table-head cols-4" style="grid-template-columns:2.2fr 1fr 1fr .9fr .8fr 30px;"><span>REPORT NAME</span><span>REFERENCE</span><span>DATE</span><span>CATEGORY</span><span>STATUS</span><span></span></div>
-          ${reportRows(control).map((row) => `<div class="table-row" style="grid-template-columns:2.2fr 1fr 1fr .9fr .8fr 30px;"><span class="report-name">${I('report')}<div><strong>${esc(row[0])}</strong></div></span><span>${esc(row[1])}</span><span>${esc(row[2])}</span><span>${esc(row[3])}</span><span>${StatusPill(row[4], row[4] === 'Archived' ? 'info' : 'good')}</span><button class="btn download-btn" type="button">${I('download')}</button></div>`).join('')}
+          <div class="table-row table-head cols-4" style="${cols}"><span>REPORT NAME</span><span>REFERENCE</span><span>DATE</span><span>CATEGORY</span><span>STATUS</span><span></span></div>
+          ${rows.map((row) => `<div class="table-row" style="${cols}"><span class="report-name">${I('report')}<div><strong>${esc(row[0])}</strong></div></span><span>${esc(row[1])}</span><span>${esc(row[2])}</span><span>${esc(row[3])}</span><span>${StatusPill(row[4], row[4] === 'Archived' ? 'info' : 'good')}</span><button class="btn download-btn" data-act="dl-report" data-ref="${esc(row[1])}" title="Download summary" aria-label="Download summary of ${esc(row[0])}" type="button">${I('download')}</button></div>`).join('') || '<div class="empty">No reports in this category.</div>'}
         </div></div>
       </div>
       <div class="data-note">Dates and references reflect the real Apollo 15 mission report and its 1971 documentation, standing in for the modern report set this dashboard is designed around.</div>`;
   }
 
+  function exportReportsCsv() {
+    const control = current.role === 'control';
+    const rows = reportRows(control).filter((r) => reportCat === 'All' || r[3] === reportCat);
+    const q = (v) => `"${String(v).replace(/"/g, '""')}"`;
+    const csv = [['Report name', 'Reference', 'Date', 'Category', 'Status'], ...rows].map((r) => r.map(q).join(',')).join('\n');
+    downloadFile('apollo15-report-summary.csv', csv, 'text/csv');
+    toast(`Exported ${rows.length} report${rows.length === 1 ? '' : 's'} to CSV`);
+  }
+
+  function downloadReport(ref) {
+    const row = reportRows(current.role === 'control').find((r) => r[1] === ref);
+    if (!row) return;
+    const txt = `${row[0]}\nReference: ${row[1]}\nDate: ${row[2]}\nCategory: ${row[3]}\nStatus: ${row[4]}\n\nSummary card generated by the Astronomican Apollo 15 replay.\nThe full source documents are cited in README.md (Primary data sources).\n`;
+    downloadFile(`${ref}.txt`, txt, 'text/plain');
+    toast(`Downloaded ${ref}`);
+  }
+
   function SettingsPage(control) {
     const groups = control
       ? [['Operator Profile', 'Flight Director • Houston Control', 'user'], ['Notification Settings', 'Critical and mission alerts', 'alert'], ['Access Control', 'Level 4 mission clearance', 'shield'], ['Security', 'Multi-factor authentication', 'shield'], ['System Preferences', 'UTC • GET convention', 'settings'], ['Dashboard Customization', 'Mission operations layout', 'activity']]
-      : [['Profile Information', 'James B. Irwin • Lunar Module Pilot', 'user'], ['Account Settings', 'Mission credential management', 'settings'], ['Notification Preferences', 'Health and mission alerts', 'alert'], ['Security Settings', 'Biometric authentication enabled', 'shield'], ['Appearance Settings', 'Dark interface • High contrast', 'spark'], ['Replay Settings', `Rate: ${sim.speed} GET-hours / second`, 'activity']];
+      : [['Profile Information', `${myCrewMember().name} • ${myCrewMember().role}`, 'user'], ['Account Settings', 'Mission credential management', 'settings'], ['Notification Preferences', 'Health and mission alerts', 'alert'], ['Security Settings', 'Biometric authentication enabled', 'shield'], ['Appearance Settings', 'Dark interface • High contrast', 'spark'], ['Replay Settings', `Rate: ${sim.speed} GET-hours / second`, 'activity']];
     return `<div class="settings-profile card">
         <div class="large-avatar">${I('user', 34)}</div>
-        <div><span class="card-kicker">${control ? 'OPERATOR PROFILE' : 'CREW PROFILE'}</span><strong>${control ? 'Flight Director' : 'James B. Irwin'}</strong><p>${control ? 'Flight Director • Houston Control' : 'Lunar Module Pilot • Apollo 15'}</p></div>
+        <div><span class="card-kicker">${control ? 'OPERATOR PROFILE' : 'CREW PROFILE'}</span><strong>${control ? 'Flight Director' : esc(myCrewMember().name)}</strong><p>${control ? 'Flight Director • Houston Control' : `${myCrewMember().role} • Apollo 15`}</p></div>
         ${StatusPill('Identity verified', 'good')}
-        <button class="btn secondary" type="button">Edit profile</button>
+        <button class="btn secondary" data-act="edit-profile" type="button">Edit profile</button>
       </div>
-      <section class="settings-grid">${groups.map(([title, copy, icon], i) => `<div class="card setting-card"><div class="setting-icon">${I(icon)}</div><div><strong>${esc(title)}</strong><span>${esc(copy)}</span></div><button class="toggle ${i !== 4 ? 'active' : ''}" type="button"><span></span></button></div>`).join('')}</section>
+      <section class="settings-grid">${groups.map(([title, copy, icon], i) => `<div class="card setting-card"><div class="setting-icon">${I(icon)}</div><div><strong>${esc(title)}</strong><span>${esc(copy)}</span></div>${(() => { const key = `${control ? 'c' : 'a'}:${title}`; const on = key in toggles ? toggles[key] : i !== 4; return `<button class="toggle ${on ? 'active' : ''}" data-act="toggle" data-key="${esc(key)}" role="switch" aria-checked="${on}" aria-label="${esc(title)}" type="button"><span></span></button>`; })()}</div>`).join('')}</section>
       <div class="card system-panel"><div><span class="card-kicker">SYSTEM INFORMATION</span><strong>Astronomican Health Network</strong><p>Version 4.2.1 • Apollo 15 dataset build • ${ENGINE.DATA.events.length} cited events loaded</p></div>${StatusPill('All systems operational', 'good')}</div>`;
   }
 
@@ -544,6 +633,7 @@
     if (page === 'check-in') return CheckinPage();
     if (page === 'reports') return ReportsPage(false);
     if (page === 'settings') return SettingsPage(false);
+    if (page === 'alerts') return AlertsPage('astronaut');
     return MetricDetailPage(ASTRO_DETAIL[page] ? page : 'health-status');
   }
 
@@ -566,7 +656,7 @@
   function ControlDashboard() {
     const snaps = ENGINE.allCrewSnapshots(sim.hour);
     const avgScore = Math.round(snaps.reduce((s, x) => s + x.score, 0) / snaps.length);
-    const critical = ENGINE.DATA.events.filter((e) => e.severity && sim.hour >= e.get_hours && sim.hour <= (e.active_until_hours ?? e.get_hours + 3));
+    const critical = activeNotices('control');
     const feed = ENGINE.recentEvents(sim.hour, 4);
     const mciSeries = ENGINE.series('LMP', sim.hour, 48, 'heart_rate_bpm');
     return `<section class="metric-grid four control-kpis">
@@ -590,7 +680,8 @@
 
   function CrewMonitoring() {
     const snaps = ENGINE.allCrewSnapshots(sim.hour);
-    return `<div class="crew-filter"><div>${StatusPill('3 connected', 'good')}<span>All crew telemetry current at GET ${AHM.formatGet(sim.hour)}</span></div><div><button class="btn filter-btn active" type="button">All crew</button><button class="btn filter-btn" type="button">Health score</button></div></div>
+    if (crewSort === 'score') snaps.sort((a, b) => a.score - b.score);
+    return `<div class="crew-filter"><div>${StatusPill('3 connected', 'good')}<span>All crew telemetry current at GET ${AHM.formatGet(sim.hour)}</span></div><div><button class="btn filter-btn ${crewSort === 'default' ? 'active' : ''}" data-act="crew-sort" data-val="default" type="button">Mission order</button><button class="btn filter-btn ${crewSort === 'score' ? 'active' : ''}" data-act="crew-sort" data-val="score" title="Show the lowest health score first" type="button">Lowest score first</button></div></div>
       <section class="crew-card-grid">
         ${snaps.map((s) => {
           const c = ENGINE.CREW.find((x) => x.id === s.crewId);
@@ -603,7 +694,7 @@
               <div>${I('spark')}<small>OXYGEN</small><strong>${fmt1(s.modern.spo2)}%</strong></div>
               <div>${I('orbit')}<small>RADIATION</small><strong>${fmt1(s.modern.doseMrad * 0.01)}<span> mSv</span></strong></div>
             </div>
-            <button class="btn secondary full" data-nav="control-health-analytics" type="button">View health profile ${I('arrow')}</button>
+            <button class="btn secondary full" data-act="view-profile" data-crew="${c.id}" type="button">View health profile ${I('arrow')}</button>
           </div>`;
         }).join('')}
       </section>
@@ -613,20 +704,40 @@
       </div>`;
   }
 
+  function avgSeries(field) {
+    const ss = ENGINE.CREW.map((c) => ENGINE.series(c.id, sim.hour, 72, field));
+    return ss[0].map((p, i) => ({ x: p.x, y: ss.reduce((sum, a) => sum + (a[i] ? a[i].y : p.y), 0) / ss.length }));
+  }
+
   function HealthAnalytics() {
-    const rows = [
-      ['Crew Health Trends (avg)', 'cyan', 'heart_rate_bpm', 'CDR'],
-      ['Cardiovascular — Irwin (LMP)', 'teal', 'heart_rate_bpm', 'LMP'],
-      ['Respiration — Worden (CMP)', 'violet', 'respiration_rate', 'CMP'],
-      ['Radiation dose accumulation', 'orange', null, null],
-      ['Sleep-period respiration — Irwin', 'cyan', 'respiration_rate', 'LMP'],
+    const crew = ENGINE.CREW.find((c) => c.id === analyticsCrew) || null;          // null = all crew
+    const nm = (id) => ENGINE.crewShortName(ENGINE.CREW.find((c) => c.id === id));
+    const doseAt = (h) => { const ids = crew ? [crew.id] : ENGINE.CREW.map((c) => c.id); return ids.reduce((sum, id) => sum + AHM.simulateModernVitals(id, h, ENGINE.DATA.events).doseMrad, 0) / ids.length * 0.01; };
+    const rows = crew ? [
+      { label: `Heart rate — ${nm(crew.id)} (${crew.id})`, color: 'cyan', field: 'heart_rate_bpm', id: crew.id },
+      { label: `Respiration — ${nm(crew.id)} (${crew.id})`, color: 'violet', field: 'respiration_rate', id: crew.id },
+      { label: 'Radiation dose accumulation', color: 'orange', field: null },
+    ] : [
+      { label: 'Crew heart-rate trend (average)', color: 'cyan', field: 'heart_rate_bpm', avg: true },
+      { label: 'Cardiovascular — Irwin (LMP)', color: 'teal', field: 'heart_rate_bpm', id: 'LMP' },
+      { label: 'Respiration — Worden (CMP)', color: 'violet', field: 'respiration_rate', id: 'CMP' },
+      { label: 'Radiation dose accumulation (crew average)', color: 'orange', field: null },
+      { label: 'Sleep-period respiration — Irwin', color: 'cyan', field: 'respiration_rate', id: 'LMP' },
     ];
-    return `<div class="analytics-toolbar"><div>${['All crew', ...ENGINE.CREW.map((c) => ENGINE.crewShortName(c))].map((n, i) => `<button class="btn filter-btn ${i === 0 ? 'active' : ''}" type="button">${esc(n)}</button>`).join('')}</div>${StatusPill('Replay engine live', 'good')}</div>
+    const filters = [['all', 'All crew'], ...ENGINE.CREW.map((c) => [c.id, ENGINE.crewShortName(c)])];
+    return `<div class="analytics-toolbar"><div>${filters.map(([id, name]) => `<button class="btn filter-btn ${analyticsCrew === id || (!crew && id === 'all') ? 'active' : ''}" data-act="analytics-crew" data-val="${id}" type="button">${esc(name)}</button>`).join('')}</div>${StatusPill('Replay engine live', 'good')}</div>
       <section class="analytics-grid">
-        ${rows.map(([label, color, field, crewId], i) => {
-          const body = field ? LineChart({ color, points: ENGINE.series(crewId, sim.hour, 72, field), eva: AHM.EVA_WINDOWS }) : LineChart({ color, points: Array.from({ length: 20 }, (_, k) => ({ x: k, y: (sim.hour / 20) * k })) });
-          const meta = field ? `${fmt1(ENGINE.avg(ENGINE.series(crewId, sim.hour, 72, field)))} AVG` : `${fmt1(sim.hour / TOTAL_HOURS * 5.1)} mSv EST`;
-          return `<div class="analytics-chart ${i === 0 ? 'wide' : ''}">${ChartCard({ label, meta, body })}</div>`;
+        ${rows.map((row, i) => {
+          let body, meta;
+          if (row.field) {
+            const pts = row.avg ? avgSeries(row.field) : ENGINE.series(row.id, sim.hour, 72, row.field);
+            body = LineChart({ color: row.color, points: pts, eva: AHM.EVA_WINDOWS });
+            meta = `${fmt1(ENGINE.avg(pts))} AVG`;
+          } else {
+            body = LineChart({ color: row.color, points: Array.from({ length: 20 }, (_, k) => ({ x: k, y: doseAt(sim.hour * k / 19) })) });
+            meta = `${fmt1(doseAt(sim.hour))} mSv EST`;
+          }
+          return `<div class="analytics-chart ${i === 0 ? 'wide' : ''}">${ChartCard({ label: row.label, meta, body })}</div>`;
         }).join('')}
       </section>`;
   }
@@ -652,19 +763,21 @@
       </div>`;
   }
 
-  function AlertsPage() {
-    const items = ENGINE.DATA.events.filter((e) => e.severity && e.get_hours <= sim.hour).slice(-10).reverse();
+  const alertKey = (e) => String(e.get_hours);
+
+  function AlertsPage(role) {
+    const all = visibleEvents(role).filter((e) => e.severity && e.get_hours <= sim.hour);
     const counts = { CRITICAL: 0, ATTENTION: 0, INFO: 0 };
-    items.forEach((e) => { counts[e.severity] = (counts[e.severity] || 0) + 1; });
+    all.forEach((e) => { counts[e.severity] = (counts[e.severity] || 0) + 1; });
+    const items = all.filter((e) => alertFilter === 'all' || e.severity === alertFilter).slice(-10).reverse();
     const toneOf = (sev) => sev === 'CRITICAL' ? 'danger' : sev === 'ATTENTION' ? 'warn' : 'info';
+    const fbtn = (val, label, n) => `<button class="btn filter-btn ${alertFilter === val ? 'active' : ''}" data-act="alert-filter" data-val="${val}" type="button">${label} <span>${n}</span></button>`;
+    const isDone = (e) => reviewed.has(alertKey(e)) || e.get_hours < sim.hour - 24;
     return `<div class="alert-filters"><div>
-        <button class="btn filter-btn active" type="button">All alerts <span>${items.length}</span></button>
-        <button class="btn filter-btn" type="button">Critical <span>${counts.CRITICAL || 0}</span></button>
-        <button class="btn filter-btn" type="button">Warnings <span>${counts.ATTENTION || 0}</span></button>
-        <button class="btn filter-btn" type="button">Information <span>${counts.INFO || 0}</span></button>
-      </div><button class="btn secondary" type="button">${I('check')} Mark all reviewed</button></div>
+        ${fbtn('all', 'All alerts', all.length)}${fbtn('CRITICAL', 'Critical', counts.CRITICAL || 0)}${fbtn('ATTENTION', 'Warnings', counts.ATTENTION || 0)}${fbtn('INFO', 'Information', counts.INFO || 0)}
+      </div><button class="btn secondary" data-act="alert-review-all" type="button">${I('check')} Mark all reviewed</button></div>
       <div class="card alert-management"><div class="alert-timeline-line"></div>
-        ${items.map((e) => `<div class="management-alert ${toneOf(e.severity)} ${e.get_hours < sim.hour - 24 ? 'reviewed' : ''}"><div class="alert-priority">${I(e.severity === 'INFO' ? 'spark' : 'alert')}</div><div class="alert-content">${StatusPill(e.severity === 'CRITICAL' ? 'Critical' : e.severity === 'ATTENTION' ? 'Warning' : 'Information', toneOf(e.severity))}<strong>${esc(e.title)}</strong><span>${esc(e.crew_id ? ENGINE.CREW.find((c) => c.id === e.crew_id).name + ' • ' : '')}${esc(e.detail)}</span></div><small>GET ${AHM.formatGet(e.get_hours)}</small><button class="btn secondary compact" type="button">Review</button></div>`).join('') || `<div class="empty">No alerts raised yet — GET ${AHM.formatGet(sim.hour)}.</div>`}
+        ${items.map((e) => `<div class="management-alert ${toneOf(e.severity)} ${isDone(e) ? 'reviewed' : ''}"><div class="alert-priority">${I(e.severity === 'INFO' ? 'spark' : 'alert')}</div><div class="alert-content">${StatusPill(e.severity === 'CRITICAL' ? 'Critical' : e.severity === 'ATTENTION' ? 'Warning' : 'Information', toneOf(e.severity))}<strong>${esc(e.title)}</strong><span>${esc(e.crew_id ? ENGINE.CREW.find((c) => c.id === e.crew_id).name + ' • ' : '')}${esc(e.detail)}</span></div><small>GET ${AHM.formatGet(e.get_hours)}</small>${isDone(e) ? `<button class="btn secondary compact" disabled type="button">${I('check', 13)} Reviewed</button>` : `<button class="btn secondary compact" data-act="alert-review" data-key="${alertKey(e)}" type="button">Review</button>`}</div>`).join('') || `<div class="empty">${all.length ? 'No alerts match this filter.' : `No alerts raised yet — GET ${AHM.formatGet(sim.hour)}.`}</div>`}
       </div>`;
   }
 
@@ -673,7 +786,7 @@
     if (page === 'crew-monitoring') return CrewMonitoring();
     if (page === 'health-analytics') return HealthAnalytics();
     if (page === 'mission-status') return MissionStatus();
-    if (page === 'alerts') return AlertsPage();
+    if (page === 'alerts') return AlertsPage('control');
     if (page === 'reports') return ReportsPage(true);
     return SettingsPage(true);
   }
@@ -689,9 +802,30 @@
   const root = document.getElementById('app');
   let current = { screen: null, role: null, page: null };
 
+  const validPages = (role) => (role === 'astronaut' ? astronautNav : controlNav).map(([l]) => slug(l)).concat(role === 'astronaut' ? ['alerts'] : []);
+
+  // Where should this route really go? (null = fine as is). Keeps signed-out visitors out of the app.
+  function guardRoute(r) {
+    if (r.screen === 'app') {
+      if (!session || session.role !== r.role) return `#${r.role}-login`;
+      if (!validPages(r.role).includes(r.page)) return `#${r.role}-dashboard`;
+    }
+    if (r.screen === 'astronaut-login' && session && session.role === 'astronaut') return '#astronaut-dashboard';
+    if (r.screen === 'control-login' && session && session.role === 'control') return '#control-dashboard';
+    return null;
+  }
+
   function render() {
     const r = parseHash();
+    const redirect = guardRoute(r);
+    if (redirect) { location.replace(redirect); return; }
     current = r;
+    // The replay clock only makes sense on pages that show its controls — never leave it running invisibly.
+    if (r.screen !== 'app' || !usesSimBar(r.page)) stopClock();
+    if (r.screen === 'app') {
+      const key = `${r.role}-${r.page}`;
+      if (trail[trail.length - 1] !== key) { trail.push(key); if (trail.length > 20) trail.shift(); }
+    } else trail = [];
     if (r.screen === 'role') root.innerHTML = tplRoleSelect();
     else if (r.screen === 'astronaut-login') root.innerHTML = tplLogin('astronaut');
     else if (r.screen === 'control-login') root.innerHTML = tplLogin('control');
@@ -701,7 +835,7 @@
     document.body.classList.toggle('reduce-motion', window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   }
 
-  // Re-render only the live content (sim tick / nav switch inside the shell) — keeps sidebar/topbar stable.
+  // Re-render only the live content (sim tick / filter change inside the shell) — keeps sidebar/topbar stable.
   function renderContent() {
     const r = parseHash();
     if (r.screen !== 'app') return;
@@ -713,7 +847,7 @@
     const range = document.getElementById('sim-range');
     if (range && document.activeElement !== range) range.value = sim.hour;
     const playBtn = document.getElementById('sim-play');
-    if (playBtn) playBtn.innerHTML = `${I(sim.playing ? 'pause' : 'play', 14)}${sim.playing ? 'Pause' : 'Simulate'}`;
+    if (playBtn) { playBtn.innerHTML = `${I(sim.playing ? 'pause' : 'play', 14)}${sim.playing ? 'Pause' : 'Simulate'}`; playBtn.classList.toggle('is-playing', sim.playing); AHM_ICONS.hydrate(playBtn); }
     const sync = document.querySelector('.sync-status');
     if (sync) sync.innerHTML = `<span class="status-dot ${sim.playing ? 'live' : ''}"></span> ${sim.playing ? 'REPLAYING' : 'PAUSED'} <strong>GET ${AHM.formatGet(sim.hour)}</strong>`;
     const missionBar = document.querySelector('.side-mission');
@@ -729,8 +863,15 @@
     renderContent();
   }
 
+  function stopClock() {
+    sim.playing = false;
+    if (sim.timer) clearInterval(sim.timer);
+    sim.timer = null;
+  }
+
   function play() {
     if (sim.playing) return;
+    if (sim.hour >= TOTAL_HOURS) sim.hour = 0;            // at splashdown, Simulate replays from launch
     sim.playing = true;
     renderContent();
     sim.timer = setInterval(() => {
@@ -739,19 +880,25 @@
     }, TICK_MS);
   }
   function pause() {
-    sim.playing = false;
-    if (sim.timer) clearInterval(sim.timer);
-    sim.timer = null;
+    stopClock();
     renderContent();
   }
 
-  function wire(r) {
-    const back = document.getElementById('btn-back');
-    if (back) back.addEventListener('click', () => {
-      if (r.screen === 'app') navigate('#role');
-      else if (r.screen !== 'role') navigate('#role');
-    });
+  function goBack() {
+    if (current.screen === 'app' && trail.length > 1) { trail.pop(); navigate(`#${trail[trail.length - 1]}`); }
+    else navigate('#role');
+  }
 
+  function logout() {
+    const role = (session && session.role) || current.role || 'astronaut';
+    stopClock();
+    saveSession(null);
+    trail = [];
+    flash = 'You have been logged out.';
+    navigate(`#${role}-login`);
+  }
+
+  function wire(r) {
     if (r.screen === 'role') {
       root.querySelectorAll('.role-card').forEach((btn) => btn.addEventListener('click', () => { selectedRole = btn.dataset.role; render(); }));
       document.getElementById('btn-continue').addEventListener('click', () => navigate(`#${selectedRole}-login`));
@@ -761,22 +908,38 @@
 
     if (r.screen === 'astronaut-login' || r.screen === 'control-login') {
       const role = r.screen === 'astronaut-login' ? 'astronaut' : 'control';
-      document.getElementById('login-form').addEventListener('submit', (e) => { e.preventDefault(); navigate(`#${role}-dashboard`); });
-      document.getElementById('btn-login-back').addEventListener('click', () => navigate('#role'));
+      const form = document.getElementById('login-form');
+      const err = document.getElementById('login-error');
+      const showError = (msg) => { err.textContent = msg; err.hidden = false; };
+      form.addEventListener('input', () => { err.hidden = true; });
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const id = form.elements.username.value.trim();
+        const pw = form.elements.password.value;
+        if (!id || !pw) { showError(`Enter your ${role === 'astronaut' ? 'Astronaut' : 'Operator'} ID and password.`); (id ? form.elements.password : form.elements.username).focus(); return; }
+        if (role === 'astronaut') {
+          const key = id.toLowerCase();
+          const acct = Object.prototype.hasOwnProperty.call(ACCOUNTS, key) ? ACCOUNTS[key] : null;
+          if (!acct || acct.password !== pw) { showError('Incorrect Astronaut ID or password. Please try again.'); form.elements.password.value = ''; form.elements.password.focus(); return; }
+          saveSession({ role, user: key, crewId: acct.crewId });
+        } else {
+          saveSession({ role, user: id });
+        }
+        trail = [];
+        navigate(`#${role}-dashboard`);
+      });
+      form.elements.username.focus();
     }
 
     if (r.screen === 'app') {
-      root.querySelectorAll('[data-nav]').forEach((btn) => btn.addEventListener('click', () => navigate(`#${btn.dataset.nav}`)));
-      const exportBtn = document.getElementById('btn-export');
-      if (exportBtn) exportBtn.addEventListener('click', () => window.print());
       wireSimBar();
-      root.querySelectorAll('.slider-row input').forEach((i) => i.addEventListener('input', () => { i.nextElementSibling.textContent = i.value; }));
       const save = document.getElementById('ci-save');
       if (save) save.addEventListener('click', () => {
         const v = (f) => Number(root.querySelector(`[data-f="${f}"]`).value), dose = document.getElementById('ci-dose').value;
-        AHM.logDemoEvent({ type: 'checkin', crewId: ASTRO_CREW_DEFAULT, get_hours: sim.hour, mood: v('mood'), fatigue: v('fatigue'),
+        AHM.logDemoEvent({ type: 'checkin', crewId: myCrew(), get_hours: sim.hour, mood: v('mood'), fatigue: v('fatigue'),
           symptoms: document.getElementById('ci-sym').value.trim(), dose: dose === '' ? null : Number(dose) });
         render();
+        toast(`Check-in logged at GET ${AHM.formatGet(sim.hour)}`);
       });
     }
   }
@@ -791,6 +954,39 @@
     document.getElementById('sim-range').addEventListener('input', (e) => { pause(); setHour(Number(e.target.value)); });
     document.getElementById('sim-jump').addEventListener('change', (e) => { if (!e.target.value) return; pause(); setHour(Number(e.target.value)); e.target.value = ''; });
   }
+
+  // One delegated handler for everything inside the app. Page content is re-rendered on every replay
+  // tick, so per-element listeners would silently die after the first tick.
+  root.addEventListener('click', (ev) => {
+    const el = ev.target.closest('[data-nav],[data-act]');
+    if (!el || !root.contains(el)) return;
+    if (el.dataset.nav) { navigate(`#${el.dataset.nav}`); return; }
+    const val = el.dataset.val;
+    switch (el.dataset.act) {
+      case 'back': goBack(); break;
+      case 'logout': logout(); break;
+      case 'print': window.print(); break;
+      case 'need-access': { const h = document.getElementById('login-help'); if (h) h.hidden = !h.hidden; break; }
+      case 'toggle': { const on = !el.classList.contains('active'); el.classList.toggle('active', on); el.setAttribute('aria-checked', String(on)); toggles[el.dataset.key] = on; break; }
+      case 'edit-profile': toast('Profile editing is locked during the Apollo 15 replay.'); break;
+      case 'alert-filter': alertFilter = val; renderContent(); break;
+      case 'alert-review': reviewed.add(el.dataset.key); renderContent(); break;
+      case 'alert-review-all': visibleEvents(current.role).filter((e) => e.severity && e.get_hours <= sim.hour).forEach((e) => reviewed.add(alertKey(e))); renderContent(); toast('All alerts marked as reviewed'); break;
+      case 'crew-sort': crewSort = val; renderContent(); break;
+      case 'analytics-crew': analyticsCrew = val; renderContent(); break;
+      case 'view-profile': analyticsCrew = el.dataset.crew; navigate('#control-health-analytics'); break;
+      case 'export-csv': exportReportsCsv(); break;
+      case 'dl-report': downloadReport(el.dataset.ref); break;
+      default: break;
+    }
+  });
+  root.addEventListener('change', (ev) => {
+    const el = ev.target.closest('[data-change]');
+    if (el && el.dataset.change === 'report-cat') { reportCat = el.value; renderContent(); }
+  });
+  root.addEventListener('input', (ev) => {
+    if (ev.target.matches('.slider-row input')) ev.target.nextElementSibling.textContent = ev.target.value;
+  });
 
   window.addEventListener('hashchange', render);
   render();

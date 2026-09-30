@@ -413,3 +413,63 @@ a.crew-row:hover { background: rgba(88, 217, 255, 0.03); }
   .page-tools { width: 100%; }
   .login-panel { padding: 32px 22px; }
 }
+
+/* ==========================================================================
+   v2 fixes: log out, back button, login feedback, toasts, print
+   ========================================================================== */
+[hidden] { display: none !important; }
+
+.back-spacer { display: block; min-height: 1px; }
+.range-chip {
+  align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  color: var(--muted); display: inline-flex; font-size: 12px; font-weight: 600; min-height: 34px; padding: 8px 12px;
+}
+
+/* log out */
+.logout-btn {
+  border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--muted);
+  font-size: 12px; font-weight: 600; gap: 7px; height: 35px; padding: 0 12px; margin-left: 4px;
+}
+.logout-btn:hover, .side-logout:hover { background: rgba(255, 102, 125, 0.08); border-color: rgba(255, 102, 125, 0.35); color: var(--red); }
+.side-logout { margin-top: 12px; width: 100%; }
+
+/* login */
+.link-btn {
+  background: none; border: 0; color: var(--cyan); cursor: pointer; font: inherit; padding: 2px 0;
+  text-decoration: underline; text-decoration-color: rgba(88, 217, 255, 0.35); text-underline-offset: 3px;
+}
+.link-btn:hover { text-decoration-color: var(--cyan); }
+.login-error, .login-flash {
+  border-radius: var(--radius-sm); font-size: 12.5px; line-height: 1.5; margin-top: 14px; padding: 10px 12px;
+}
+.login-error { background: rgba(255, 102, 125, 0.08); border: 1px solid rgba(255, 102, 125, 0.28); color: var(--red); }
+.login-flash { align-items: center; background: rgba(92, 230, 168, 0.08); border: 1px solid rgba(92, 230, 168, 0.22); color: var(--green); display: flex; gap: 8px; }
+.login-note { margin: -6px 0 16px; }
+.login-note strong { color: var(--text); font-weight: 600; }
+.field input:focus-visible { outline: none; }
+
+/* toast */
+.toast {
+  background: var(--surface-3); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); bottom: 26px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, 0.45); color: var(--text); font-size: 13px; left: 50%; max-width: calc(100vw - 32px);
+  opacity: 0; padding: 11px 16px; pointer-events: none; position: fixed; transform: translate(-50%, 12px);
+  transition: opacity 180ms, transform 180ms; z-index: 50;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* small-screen: keep log out reachable as an icon */
+@media (max-width: 900px) {
+  .side-logout span { display: none; }
+  .side-logout { padding-inline: 0; }
+}
+@media (max-width: 640px) {
+  .logout-btn span { display: none; }
+  .logout-btn { padding: 0; width: 35px; }
+}
+
+/* print / "Export": only the page content */
+@media print {
+  .sidebar, .topbar, .sim-bar, .page-tools, .toast, .starfield { display: none !important; }
+  .workspace { margin-left: 0 !important; width: 100% !important; }
+  body { background: #fff; }
+}

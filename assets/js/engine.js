@@ -75,7 +75,7 @@ const ENGINE = (() => {
   function recentEvents(hour, n) { return eventsUpTo(hour).slice(-n).reverse(); }
 
   // Most recent crew self-check-in (from the demo log) within 24 GET-hours before `hour`.
-  const latestCheckin = (hour) => AHM.readDemoLog().filter((e) => e.type === 'checkin' && e.get_hours <= hour && hour - e.get_hours <= 24).pop() || null;
+  const latestCheckin = (hour, crewId) => AHM.readDemoLog().filter((e) => e.type === 'checkin' && e.get_hours <= hour && hour - e.get_hours <= 24 && (!crewId || !e.crewId || e.crewId === crewId)).pop() || null;
 
   // Rule-based decision support: active alerts + latest self-report -> onboard actions (no ground link needed).
   function advise(s, ci) {
