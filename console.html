@@ -6,7 +6,6 @@
 <title>Redirecting…</title>
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
 <script>
-  // console.html is kept only for old links/bookmarks; the app now lives at index.html.
   var hash = location.hash ? location.hash.replace('#astronaut', '#astronaut').replace('#mission-control', '#control-dashboard') : '#astronaut-dashboard';
   location.replace('index.html' + (hash || '#astronaut-dashboard'));
 </script>
