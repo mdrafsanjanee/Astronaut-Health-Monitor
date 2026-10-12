@@ -331,8 +331,9 @@ Control decision shown here is presented as historical record, cited to
 its source — never as something the interactive demo layer generated.
 
 ## Contributors:
+[Md.Rafsan Janee](https://github.com/mdrafsanjanee)
 
-[Momtahina](https://github.com/momtahinaahmed)
+[Momtahina Ahmed](https://github.com/momtahinaahmed)
 
-[Imtiyaz](https://github.com/imtiyazahmed10)
+[Imtiyaz Ahmed](https://github.com/imtiyazahmed10)
 
