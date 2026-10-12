@@ -329,3 +329,7 @@ autonomous medical diagnostic system. It does not diagnose disease,
 prescribe medication, or give medical instructions. Every real Mission
 Control decision shown here is presented as historical record, cited to
 its source — never as something the interactive demo layer generated.
+
+## Contributors:
+
+[Momtahina](github.com/tahsina07)
