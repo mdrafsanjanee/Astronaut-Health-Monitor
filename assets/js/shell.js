@@ -177,11 +177,13 @@
    * Screen: Role selection
    * ------------------------------------------------------------------ */
 
+  const ROLE_KEY = 'ahm.role';
   let selectedRole = 'astronaut';
+  try { const saved = sessionStorage.getItem(ROLE_KEY); if (saved === 'astronaut' || saved === 'control') selectedRole = saved; } catch (e) { /* storage unavailable */ }
 
   function tplRoleSelect() {
-    const roleCard = (active, bullets, icon, label, title, code) => `
-      <button class="role-card ${active ? 'active' : ''}" aria-pressed="${active ? 'true' : 'false'}" data-role="${label === 'ASTRONAUT' ? 'astronaut' : 'control'}" type="button">
+    const roleCard = (role, active, bullets, icon, label, title, code) => `
+      <button class="role-card ${active ? 'active' : ''}" role="radio" aria-checked="${active ? 'true' : 'false'}" tabindex="${active ? '0' : '-1'}" data-role="${role}" type="button">
         <div class="role-card-top"><div class="role-icon">${I(icon, 28)}</div><span class="role-code">${label}</span><span class="radio-indicator">${active ? '<span></span>' : ''}</span></div>
         <div class="role-title">${title}</div>
         <div class="role-rule"></div>
@@ -196,9 +198,10 @@
         <div class="eyebrow">ORBITAL HEALTH NETWORK // ACCESS PORTAL</div>
         <div class="display-title">Welcome to Astronomican</div>
         <p class="display-subtitle">Real Apollo 15 biomedical telemetry, replayed hour by hour</p>
-        <div class="role-grid">
-          ${roleCard(selectedRole === 'astronaut', ['Personal health monitoring', 'Mission performance tracking', 'Radiation and wellness monitoring'], 'user', 'Crew Member', 'ASTRONAUT', '01')}
-          ${roleCard(selectedRole === 'control', ['Crew monitoring', 'Mission oversight', 'Health analytics and alerts'], 'crew', 'Control Operator', 'MISSION CONTROL', '02')}
+        <div class="challenge-badge"><span>NASA SPACE APPS 2026</span>Challenge: Create Health Monitoring Software for Astronauts on Space Missions</div>
+        <div class="role-grid" role="radiogroup" aria-label="Choose your role">
+          ${roleCard('astronaut', selectedRole === 'astronaut', ['Personal health monitoring', 'Mission performance tracking', 'Radiation and wellness monitoring'], 'user', 'Crew Member', 'ASTRONAUT', '01')}
+          ${roleCard('control', selectedRole === 'control', ['Crew monitoring', 'Mission oversight', 'Health analytics and alerts'], 'crew', 'Control Operator', 'MISSION CONTROL', '02')}
         </div>
         <button class="btn primary continue-btn" id="btn-continue" type="button">Continue as ${selectedRole === 'astronaut' ? 'Astronaut' : 'Mission Control'}${I('arrow')}</button>
         <div class="entry-footnote">SECURE ACCESS • AUTHORIZED PERSONNEL ONLY • ASTRONOMICAN v4.2 · <a href="#about" id="link-about">About this replay</a></div>
@@ -900,8 +903,35 @@
 
   function wire(r) {
     if (r.screen === 'role') {
-      root.querySelectorAll('.role-card').forEach((btn) => btn.addEventListener('click', () => { selectedRole = btn.dataset.role; render(); }));
-      document.getElementById('btn-continue').addEventListener('click', () => navigate(`#${selectedRole}-login`));
+      const cards = Array.from(root.querySelectorAll('.role-card'));
+      const cont = document.getElementById('btn-continue');
+      // Update in place (no re-render) so keyboard focus and the hover state survive a selection.
+      const choose = (role, focus) => {
+        selectedRole = role;
+        try { sessionStorage.setItem(ROLE_KEY, role); } catch (e) { /* storage unavailable */ }
+        cards.forEach((c) => {
+          const on = c.dataset.role === role;
+          c.classList.toggle('active', on);
+          c.setAttribute('aria-checked', String(on));
+          c.tabIndex = on ? 0 : -1;
+          c.querySelector('.radio-indicator').innerHTML = on ? '<span></span>' : '';
+          c.querySelector('.role-card-footer').firstChild.textContent = on ? 'SELECTED' : 'SELECT ROLE';
+          if (on && focus) c.focus();
+        });
+        cont.innerHTML = `Continue as ${role === 'astronaut' ? 'Astronaut' : 'Mission Control'}${I('arrow')}`;
+        AHM_ICONS.hydrate(cont);
+      };
+      cards.forEach((btn, i) => {
+        btn.addEventListener('click', () => choose(btn.dataset.role, false));
+        btn.addEventListener('dblclick', () => navigate(`#${btn.dataset.role}-login`));
+        btn.addEventListener('keydown', (e) => {
+          const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
+          if (!step) return;
+          e.preventDefault();
+          choose(cards[(i + step + cards.length) % cards.length].dataset.role, true);
+        });
+      });
+      cont.addEventListener('click', () => navigate(`#${selectedRole}-login`));
       const aboutLink = document.getElementById('link-about');
       if (aboutLink) aboutLink.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('about').scrollIntoView({ behavior: 'smooth' }); });
     }
