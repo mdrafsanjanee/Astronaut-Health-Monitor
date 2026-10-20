@@ -473,3 +473,25 @@ a.crew-row:hover { background: rgba(88, 217, 255, 0.03); }
   .workspace { margin-left: 0 !important; width: 100% !important; }
   body { background: #fff; }
 }
+
+
+/* ---- welcome page polish ---------------------------------------------------------------------- */
+.challenge-badge {
+  align-items: center; background: rgba(88, 217, 255, 0.05); border: 1px solid var(--line);
+  border-radius: 999px; color: var(--muted); display: inline-flex; flex-wrap: wrap; font-size: 12px;
+  gap: 10px; justify-content: center; margin: -18px 0 30px; padding: 7px 16px; text-align: center;
+}
+.challenge-badge span { color: var(--cyan); font-size: 10.5px; font-weight: 700; letter-spacing: 0.16em; }
+.role-card:focus-visible, .continue-btn:focus-visible, .entry-footnote a:focus-visible {
+  outline: 2px solid var(--cyan); outline-offset: 3px;
+}
+.role-card:not(.active) { opacity: 0.86; }
+.role-card:not(.active):hover { opacity: 1; }
+@media (max-width: 720px) {
+  .role-card { min-height: 300px; padding: 22px; }
+  .challenge-badge { border-radius: 14px; margin-top: -14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .role-card { transition: none; }
+  .role-card:hover, .role-card.active { transform: none; }
+}
