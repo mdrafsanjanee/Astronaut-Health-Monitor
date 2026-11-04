@@ -17,7 +17,7 @@ Plain HTML, CSS and vanilla JavaScript.
 
 | Page | What it is |
 |------|-----------|
-| **Home** | Landing page: what the project is, three ways in, the method and the data badges. |
+| **Home** | Landing page: an animated glimpse of Apollo 15's flight path (Earth, Moon, five real milestones), three ways in, the method and the data badges. |
 | **Demo Astronaut** | Pick a crew member. Live vitals (heart rate, blood pressure, breathing, temperature) from a placeholder datasheet, step-by-step alerts, crewmate notices, a body map and a daily check-in. No Apollo data. |
 | **Demo Mission Control** | All three crew with live numbers, live alerts and what each astronaut was told, live heart-rate charts, an alert log. No Apollo data. |
 | **Apollo 15 Simulation** | Press Simulate to replay the real mission: status score, body map, alerts with a send-and-acknowledge exchange, heart-rate chart, all-crew board, cited mission log. No live feed. |
@@ -28,6 +28,13 @@ Plain HTML, CSS and vanilla JavaScript.
 The two demo pages share the live placeholder feed. The Apollo 15 Simulation has its own replay clock: **Simulate** (8 mission hours per second), a slider, and **Jump to event** (all 27 real events).
 
 **Demo paths:** (1) Demo Astronaut -> "Demo: jump to next alert" -> follow the steps -> switch to Scott to see the crew notice. (2) Apollo 15 Simulation -> Jump to event -> "Cardiac arrhythmia detected" -> Send to Irwin -> Acknowledge as Irwin.
+
+## Using the app
+
+The Astronaut and Apollo 15 pages put the body map on the left and one topic at a time on the right, chosen with tabs
+(Live vitals / Body detail / Check-in, and Overview / Body detail / Crew & log / Data & limits). Tapping a body system, on the figure
+or in the list under it, opens its Body detail tab. The Apollo 15 replay bar stays on screen while you scroll. On phones the main pages
+sit in a bottom tab bar and the full menu opens from the top-right button.
 
 ## Adding the resources (after 15 November 2026)
 

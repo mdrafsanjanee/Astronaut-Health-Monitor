@@ -28,10 +28,10 @@
   const sim = { hour: 0, playing: false, timer: null, speed: 8 };   // 8 GET-hours per real second
   const TICK_MS = 200;
 
-  const state = { crew: 'LMP', organ: null, open: {} };
+  const state = { crew: 'LMP', organ: null, open: {}, tab: 'live', simTab: 'overview' };
   const reviewed = new Set();
 
-  const NAV = [['home', 'Home'], ['astronaut', 'Demo Astronaut'], ['control', 'Demo Mission Control'], ['simulation', 'Apollo 15 Simulation'], ['project', 'Project'], ['resources', 'Resources'], ['references', 'References']];
+  const NAV = [['home', 'Home'], ['astronaut', 'Astronaut'], ['control', 'Mission Control'], ['simulation', 'Apollo 15'], ['project', 'Project'], ['resources', 'Resources'], ['references', 'References']];
   const LIVE_PAGES = ['astronaut', 'control', 'simulation'];
 
   const crewMember = () => ENGINE.CREW.find((c) => c.id === state.crew) || ENGINE.CREW[2];
@@ -139,14 +139,25 @@
 
   const utcNow = () => new Date().toISOString().slice(11, 19);
 
+  // Logo: an "A" whose crossbar is a heartbeat line.
+  const logoSvg = (s) => `<svg class="logo" width="${s || 32}" height="${s || 32}" viewBox="0 0 32 32" aria-hidden="true">
+    <defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#cdbfff"/><stop offset="1" stop-color="#7c3aed"/></linearGradient></defs>
+    <rect x="1" y="1" width="30" height="30" rx="8" fill="#0e1322" stroke="url(#lg)" stroke-opacity=".7"/>
+    <path d="M8 24.5 16 7l8 17.5" fill="none" stroke="url(#lg)" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M10.2 19.6h3.2l1.5-3 2.1 5.6 1.5-2.6h3.4" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+  const TABBAR = [['home', 'Home', 'home'], ['astronaut', 'Astronaut', 'user'], ['control', 'Control', 'crew'], ['simulation', 'Apollo 15', 'activity']];
+
   function tplTopbar(page) {
-    return `<header class="sx-top">
-      <a class="sx-brand" href="#home" aria-label="Astronomican home"><span class="brand-mark"><span class="brand-orbit"></span><span class="brand-star"></span></span><span class="sx-brand-name">ASTRONOMICAN</span></a>
-      <nav class="sx-nav" aria-label="Pages">
+    return `<header class="sx-top" id="top">
+      <a class="sx-brand" href="#home" aria-label="Astronomican home">${logoSvg(32)}<span class="sx-brand-name">ASTRONOMICAN</span></a>
+      <nav class="sx-nav" id="main-nav" aria-label="Pages">
         ${NAV.map(([id, label]) => `<a href="#${id}" class="${id === page ? 'active' : ''}" ${id === page ? 'aria-current="page"' : ''}>${navLinkHtml(id, label)}</a>`).join('')}
       </nav>
       <span class="sx-clock" title="Coordinated Universal Time">UTC <b id="utc-clock">${utcNow()}</b></span>
-    </header>`;
+      <button class="sx-menu" data-act="menu" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Open menu"><span></span><span></span><span></span></button>
+    </header>
+    <nav class="sx-tabbar" aria-label="Main pages">${TABBAR.map(([id, label, icon]) => `<a href="#${id}" class="${id === page ? 'active' : ''}">${I(icon, 20)}<span>${label}</span></a>`).join('')}</nav>`;
   }
 
   function tplSimBar() {
@@ -182,18 +193,31 @@
             <a class="btn secondary" href="#project">Read the project</a>
           </div>
         </div>
-        <div class="hero-art" aria-hidden="true">
-          <svg viewBox="0 0 400 400">
-            <circle class="ring" cx="200" cy="200" r="190"/><circle class="ring dash" cx="200" cy="200" r="150"/><circle class="ring" cx="200" cy="200" r="104"/>
-            <path class="arc" d="M200 10A190 190 0 0 1 390 200"/>
-            <circle class="planet" cx="200" cy="200" r="58"/>
-            <path d="M150 200h24l10-22 18 46 12-24h36" fill="none" stroke="#b9a3ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-            <g class="sat"><circle cx="390" cy="200" r="7" fill="#8b5cf6"/><circle cx="390" cy="200" r="14" fill="none" stroke="#8b5cf6" stroke-opacity=".4"/></g>
-            <g class="sat2"><circle cx="200" cy="50" r="5" fill="#34d399"/></g>
+        <figure class="mission" role="img" aria-label="Schematic of Apollo 15's path from Earth to the Moon and back, with five milestones">
+          <div class="mp-top"><span class="sn-label">APOLLO 15 · FLIGHT PATH</span><span class="mp-phase" id="mp-phase">Outbound to the Moon</span></div>
+          <svg viewBox="0 30 560 320" class="mp-svg" aria-hidden="true">
+            <defs>
+              <radialGradient id="earthg" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#7fb7ff"/><stop offset=".55" stop-color="#3b5bd6"/><stop offset="1" stop-color="#15204f"/></radialGradient>
+              <radialGradient id="moong" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#f1f3f8"/><stop offset="1" stop-color="#8f98ad"/></radialGradient>
+              <radialGradient id="earthglow"><stop offset="0" stop-color="#5b7cff" stop-opacity=".35"/><stop offset="1" stop-color="#5b7cff" stop-opacity="0"/></radialGradient>
+            </defs>
+            <g class="stars">${[[40,40],[120,330],[210,40],[300,350],[360,30],[500,60],[520,300],[470,350],[60,120],[250,200],[330,250],[180,150]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 3 ? 1 : 1.6}"></circle>`).join('')}</g>
+            <circle cx="90" cy="200" r="88" fill="url(#earthglow)"></circle>
+            <circle cx="90" cy="200" r="40" fill="url(#earthg)"></circle>
+            <circle class="orbit-ring" cx="440" cy="170" r="52"></circle>
+            <circle cx="440" cy="170" r="24" fill="url(#moong)"></circle>
+            <circle cx="432" cy="164" r="4" fill="#000" opacity=".12"></circle><circle cx="448" cy="178" r="6" fill="#000" opacity=".1"></circle>
+            <text class="body-lbl" x="90" y="262" text-anchor="middle">EARTH</text>
+            <text class="body-lbl" x="440" y="254" text-anchor="middle">MOON</text>
+            <path id="mp-path" class="mp-base" d="M122 172C190 70 330 60 400 137A52 52 0 1 1 400 203C330 300 190 330 126 236"></path>
+            <path id="mp-trail" class="mp-trail" d="M122 172C190 70 330 60 400 137A52 52 0 1 1 400 203C330 300 190 330 126 236"></path>
+            ${[1, 2, 3, 4, 5].map((n, i) => `<g class="mp-ms" data-f="${[0, .43, .53, .64, 1][i]}"><circle r="9"></circle><text y="3.6" text-anchor="middle">${n}</text></g>`).join('')}
+            <g id="mp-dot"><circle class="halo" r="11"></circle><circle r="4.5"></circle></g>
           </svg>
-          <div class="hero-readout r2"><span>Status</span><b>Nominal</b></div>
-          <div class="hero-readout"><span>Mission</span><b>${days} days</b></div>
-        </div>
+          <div class="mp-read"><span>GET</span><b id="mp-get">0:00</b><small>hours : minutes since launch</small></div>
+          <ol class="mp-legend">${[['Launch', 0], ['Lunar landing', 104.708], ['Lunar liftoff', 171.623], ['Trans-Earth injection', 223.8], ['Splashdown', 295.198]].map(([n, g], i) => `<li data-f="${[0, .43, .53, .64, 1][i]}"><b>${i + 1}</b><span>${n}</span><small>GET ${AHM.formatGet(g)}</small></li>`).join('')}</ol>
+          <figcaption>Schematic, not to scale. Milestone times come from the cited event log.</figcaption>
+        </figure>
       </section>
       <div class="ticker" aria-hidden="true"><div class="ticker-track">${track}</div></div>
       <section class="stats" aria-label="Project at a glance">
@@ -424,27 +448,50 @@
     </div>`;
   }
 
+  const ORGAN_SHORT = { heart: 'Heart', lungs: 'Lungs', brain: 'Brain & sleep', msk: 'Bones & muscle', digestive: 'Stomach & gut', kidneys: 'Kidneys', rad: 'Whole body' };
+  const SYS_ORDER = ['heart', 'lungs', 'brain', 'msk', 'digestive', 'kidneys', 'rad'];
+
+  // Modern body map: a segmented mannequin with glowing organ hotspots, plus a plain list of the same seven systems
+  // underneath (easier to tap and to read than labels on the drawing). Both use data-act="organ".
   function avatarCard(o, shown) {
-    const grp = (key, shapes, labelHtml) => `<g class="org st-${o[key].level}${shown === key ? ' selected' : ''}" data-act="organ" data-val="${key}" role="button" tabindex="0" aria-pressed="${shown === key}" aria-label="${ORGAN_NAMES[key]}: ${LEVEL_WORD[o[key].level]}">${shapes}${labelHtml}</g>`;
-    const lab = (text, x, y, anchor, x1, x2) => `<line class="lead" x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"></line><text class="lbl" x="${x}" y="${y + 4}" text-anchor="${anchor}">${text}</text>`;
-    const limbs = '<path class="shape" d="M108 118 Q80 126 72 162 L62 252 Q60 270 74 270 Q87 270 89 254 L101 178 Z"></path><path class="shape" d="M232 118 Q260 126 268 162 L278 252 Q280 270 266 270 Q253 270 251 254 L239 178 Z"></path>'
-      + '<path class="shape" d="M104 282 Q136 294 168 286 L162 410 Q160 450 146 458 L124 458 Q112 452 114 412 Z"></path><path class="shape" d="M236 282 Q204 294 172 286 L178 410 Q180 450 194 458 L216 458 Q228 452 226 412 Z"></path>'
-      + '<circle class="joint" cx="112" cy="124" r="5"></circle><circle class="joint" cx="228" cy="124" r="5"></circle><circle class="joint" cx="132" cy="296" r="5"></circle><circle class="joint" cx="208" cy="296" r="5"></circle><circle class="joint" cx="138" cy="392" r="5"></circle><circle class="joint" cx="202" cy="392" r="5"></circle>';
-    const svg = `<svg class="sx-body" viewBox="0 0 340 470" role="group" aria-label="Interactive body map. Select an organ for details.">
-      <g class="sil"><ellipse cx="170" cy="52" rx="32" ry="38"></ellipse><rect x="157" y="86" width="26" height="24" rx="6"></rect>
-        <path d="M110 112 Q170 96 230 112 Q242 130 240 190 L236 292 Q170 312 104 292 L100 190 Q98 130 110 112 Z"></path></g>
-      ${grp('msk', limbs, lab('Bones &amp; muscle', 332, 360, 'end', 226, 262))}
-      ${grp('kidneys', '<ellipse class="shape" cx="138" cy="232" rx="9" ry="15" transform="rotate(-14 138 232)"></ellipse><ellipse class="shape" cx="202" cy="232" rx="9" ry="15" transform="rotate(14 202 232)"></ellipse>', lab('Kidneys', 8, 232, 'start', 62, 128))}
-      ${grp('lungs', '<path class="shape" d="M164 120 C150 116 124 124 122 160 C120 190 126 206 144 204 C158 202 164 190 164 170 Z"></path><path class="shape" d="M176 120 C190 116 216 124 218 160 C220 190 214 206 196 204 C182 202 176 190 176 170 Z"></path>', lab('Lungs', 8, 150, 'start', 52, 124))}
-      ${grp('heart', '<path class="shape" d="M164 200 C144 180 138 164 148 154 C156 146 164 154 164 160 C164 154 172 146 180 154 C190 164 184 180 164 200 Z"></path>', lab('Heart', 332, 176, 'end', 182, 292))}
-      ${grp('digestive', '<path class="shape" d="M178 214 C198 208 212 222 206 240 C200 256 184 250 178 258 C170 250 170 228 178 214 Z"></path><path class="shape thick" d="M132 266 C132 250 208 250 208 266 C208 278 132 276 132 288"></path>', lab('Stomach &amp; gut', 332, 246, 'end', 214, 232))}
-      ${grp('brain', '<path class="shape" d="M142 46 C140 28 156 20 170 22 C184 20 200 28 198 46 C202 60 188 68 170 68 C152 68 138 60 142 46 Z"></path><path class="fold" d="M170 24 V66"></path>', lab('Brain', 8, 46, 'start', 52, 140))}
+    const ARM = 'M80 112C64 114 56 126 55 142L49 236C48 246 47 256 45 270L41 322C40 334 46 342 53 340C60 338 62 332 62 324L67 272C69 258 72 248 74 236L82 150C84 130 88 116 80 112Z';
+    const LEG = 'M108 306H145L143 408C142 426 140 440 138 458L136 486Q138 498 143 504Q142 508 138 508H114Q108 508 108 500L108 458C104 440 101 426 101 408Z';
+    const MIR = 'translate(300 0) scale(-1 1)';
+    const grp = (key, cls, inner) => `<g class="org ${cls || ''} st-${o[key].level}${shown === key ? ' selected' : ''}" data-act="organ" data-val="${key}" role="button" tabindex="0" aria-pressed="${shown === key}" aria-label="${ORGAN_NAMES[key]}: ${LEVEL_WORD[o[key].level]}"><title>${ORGAN_SHORT[key]}: ${LEVEL_WORD[o[key].level]}</title>${inner}</g>`;
+    const ping = (x, y) => `<circle class="ping" cx="${x}" cy="${y}" r="5"></circle>`;
+    const vert = Array.from({ length: 15 }, (_, i) => `<rect class="vert" x="147" y="${108 + i * 12.6}" width="6" height="8.6" rx="2.4"></rect>`).join('');
+    const ribs = Array.from({ length: 6 }, (_, i) => { const y = 118 + i * 11; return `<path class="bone" d="M148 ${y}Q128 ${y + 3} ${116 - i} ${y + 17}M152 ${y}Q172 ${y + 3} ${184 + i} ${y + 17}"></path>`; }).join('');
+    const joints = [[88, 122], [212, 122], [61, 238], [239, 238], [53, 318], [247, 318], [127, 314], [173, 314], [122, 412], [178, 412]].map(([x, y]) => `<circle class="joint" cx="${x}" cy="${y}" r="4.2"></circle>`).join('');
+
+    const svg = `<svg class="sx-body" viewBox="0 0 300 520" role="group" aria-label="Interactive body map. Select a body system for details.">
+      <defs>
+        <linearGradient id="bodyg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b2342"/><stop offset="1" stop-color="#0d1222"/></linearGradient>
+        <linearGradient id="scang" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b9a3ff" stop-opacity="0"/><stop offset="1" stop-color="#b9a3ff" stop-opacity=".55"/></linearGradient>
+        <path id="armP" d="${ARM}"></path><path id="legP" d="${LEG}"></path>
+      </defs>
+      ${grp('rad', 'sil', `<g class="parts">
+          <use class="part" href="#armP"></use><use class="part" href="#armP" transform="${MIR}"></use><use class="part" href="#legP"></use><use class="part" href="#legP" transform="${MIR}"></use>
+          <path class="part" d="M110 108C126 101 174 101 190 108C202 112 206 124 205 140L201 232C199 252 192 270 188 296H112C108 270 101 252 99 232L95 140C94 124 98 112 110 108Z"></path>
+          <rect class="part" x="140" y="84" width="20" height="22" rx="6"></rect>
+          <path class="part" d="M150 20C170 20 178 38 177 54C176 72 166 86 150 86C134 86 124 72 123 54C122 38 130 20 150 20Z"></path></g>`)}
+      <rect class="scan" x="46" y="0" width="208" height="2" rx="1"></rect>
+      ${grp('msk', 'msk', `<g class="skel">${vert}${ribs}<path class="bone" d="M118 288C126 274 174 274 182 288C176 298 124 298 118 288Z"></path></g>
+          <use class="limb" href="#armP"></use><use class="limb" href="#armP" transform="${MIR}"></use><use class="limb" href="#legP"></use><use class="limb" href="#legP" transform="${MIR}"></use>${joints}${ping(127, 314)}`)}
+      ${grp('kidneys', '', `<path class="shape" d="M118 218C110 220 108 236 114 244C120 248 126 240 126 230C126 224 124 218 118 218Z"></path><path class="shape" d="M182 218C190 220 192 236 186 244C180 248 174 240 174 230C174 224 176 218 182 218Z"></path>${ping(118, 232)}`)}
+      ${grp('lungs', '', `<path class="shape" d="M146 128C134 122 116 130 112 154C108 178 112 200 124 204C136 206 146 196 146 176Z"></path><path class="shape" d="M154 128C166 122 184 130 188 154C192 178 188 200 176 204C164 206 154 196 154 176Z"></path><path class="fold" d="M150 104V134M150 134L138 148M150 134L162 148"></path>${ping(126, 168)}`)}
+      ${grp('digestive', '', `<path class="shape" d="M142 216C158 208 176 218 174 238C172 252 156 254 148 246C140 240 138 224 142 216Z"></path><path class="shape thick" d="M124 266C124 250 176 250 176 266C176 280 124 274 124 288"></path>${ping(160, 236)}`)}
+      ${grp('heart', '', `<path class="shape" d="M156 216C138 200 134 184 142 176C149 170 156 174 156 180C156 174 163 170 170 176C178 184 174 200 156 216Z"></path><path class="fold" d="M147 190H152L155 184L158 197L161 190H166"></path>${ping(156, 192)}`)}
+      ${grp('brain', '', `<path class="shape" d="M128 52C126 34 140 26 150 28C160 26 174 34 172 52C174 66 162 74 150 74C138 74 126 66 128 52Z"></path><path class="fold" d="M150 30V72M138 42C142 46 142 52 138 56M162 42C158 46 158 52 162 56"></path>${ping(150, 50)}`)}
     </svg>`;
+
+    const worst = SYS_ORDER.reduce((w, k) => worse(w, o[k].level), 'none');
+    const overall = worst === 'alert' ? ['Alert', 'danger'] : worst === 'watch' ? ['Attention', 'warn'] : worst === 'ok' ? ['All normal', 'good'] : ['No data', 'info'];
+    const rows = SYS_ORDER.map((k) => `<li><button class="sx-sysrow st-${o[k].level}${shown === k ? ' selected' : ''}" data-act="organ" data-val="${k}" type="button" aria-pressed="${shown === k}"><i></i><span>${ORGAN_SHORT[k]}</span><b>${LEVEL_WORD[o[k].level]}</b></button></li>`).join('');
     return `<div class="card sx-avatar">
-      <div class="card-head"><div><span class="card-kicker">BODY MAP</span><strong>Tap an organ for details</strong></div></div>
-      ${svg}
-      <button class="sx-rad st-${o.rad.level}${shown === 'rad' ? ' selected' : ''}" data-act="organ" data-val="rad" type="button">Whole body · radiation &amp; temperature <b>${LEVEL_WORD[o.rad.level]}</b></button>
-      <ul class="sx-legend" aria-label="Colour key"><li><i class="st-alert"></i>Critical</li><li><i class="st-watch"></i>Attention</li><li><i class="st-ok"></i>Normal</li><li><i class="st-none"></i>No data flagged</li></ul>
+      <div class="card-head"><div><span class="card-kicker">BODY MAP · ${esc(crewMember().name.split(' ').pop().toUpperCase())}</span><strong>Select a system</strong></div>${StatusPill(overall[0], overall[1])}</div>
+      <div class="sx-stage">${svg}</div>
+      <ul class="sx-sys">${rows}</ul>
+      <ul class="sx-legend" aria-label="Colour key"><li><i class="st-alert"></i>Critical</li><li><i class="st-watch"></i>Attention</li><li><i class="st-ok"></i>Normal</li><li><i class="st-none"></i>No data</li></ul>
     </div>`;
   }
 
@@ -507,23 +554,42 @@
       </section>`;
   }
 
-  // Demo Astronaut, below the live panel: organ detail and any suggestions from the latest check-in.
-  function demoBody(c) {
-    const acts = checkinActions(recentCheckin(state.crew));
-    return `${acts.length ? insight('is-message', 'spark', 'SUGGESTED ACTION · FROM YOUR CHECK-IN', acts.map(esc).join('<br>')) : ''}
-      ${organDetail(c.shown, c.organs, 'demo')}`;
+  // Tab bar above the main column (Astronaut and Apollo 15 pages). Only one topic is on screen at a time.
+  function tabBar() {
+    const isA = current === 'astronaut';
+    const cur = isA ? state.tab : state.simTab;
+    const tabs = isA
+      ? [['live', 'Live vitals', LIVE.active(state.crew).length], ['body', 'Body detail', 0], ['checkin', 'Check-in', 0]]
+      : [['overview', 'Overview', activeNotices('astronaut').length], ['body', 'Body detail', 0], ['log', 'Crew & log', 0], ['data', 'Data & limits', 0]];
+    return `<div class="sx-tabs" role="tablist">${tabs.map(([id, label, n]) => `<button class="sx-tab${id === cur ? ' active' : ''}" role="tab" aria-selected="${id === cur}" data-act="tab" data-val="${id}" type="button">${label}${n ? `<span class="sx-badge">${n}</span>` : ''}</button>`).join('')}</div>`;
   }
 
-  // Apollo 15 Simulation: everything that depends on the replay clock.
-  function simBody(c) {
+  // Demo Astronaut main column, by tab.
+  function astroPane(c) {
+    if (state.tab === 'body') return organDetail(c.shown, c.organs, 'demo');
+    if (state.tab === 'checkin') return `<section id="checkin-body">${checkinBlock()}</section>`;
+    const acts = checkinActions(recentCheckin(state.crew));
+    return `${feedHtml()}${acts.length ? insight('is-message', 'spark', 'SUGGESTED ACTION · FROM YOUR CHECK-IN', acts.map(esc).join('<br>')) : ''}`;
+  }
+
+  // Apollo 15 Simulation main column, by tab.
+  function simPane(c) {
     const { s, organs, shown } = c;
+    const tab = state.simTab;
+    if (tab === 'body') return organDetail(shown, organs, 'sim', s);
+    if (tab === 'data') return ModernLayer(s) + LimitsBlock();
+    if (tab === 'log') {
+      return `<h3 class="sx-h3">All crew at this moment</h3>
+        <div class="card sx-board">${ENGINE.allCrewSnapshots(sim.hour).map((sn) => crewRowSim(sn, crewById(sn.crewId))).join('')}</div>
+        <h3 class="sx-h3">Mission log <small>${eventsSoFar('control').length} of ${ENGINE.DATA.events.length} events so far</small></h3>
+        <ul class="ev-list">${eventsSoFar('control').slice(-8).reverse().map((e) => EventItem(e, true)).join('') || '<li class="empty">Nothing yet. Press Simulate or drag the clock.</li>'}</ul>`;
+    }
     const [title, copy] = ENGINE.scoreCopy(s.score);
     const alerts = activeNotices('astronaut');
     const hr = ENGINE.series(state.crew, sim.hour, 48, 'heart_rate_bpm');
     const tone = s.score >= 90 ? 'good' : s.score >= 75 ? '' : s.score >= 55 ? 'is-warn' : 'is-danger';
     const surfaceSleep = AHM.eventsUpTo(ENGINE.DATA.events, sim.hour).filter((e) => e.category === 'sleep').pop();
     const dose = s.modern.doseMrad;
-    const log = eventsSoFar('control').slice(-8).reverse();
     return `<div class="card sx-status ${tone}">
         <div class="score-ring" style="--ring-p:${s.score};${s.score < 90 ? '--ring-c:var(--orange)' : ''}"><div><strong>${s.score}</strong><span>/ 100</span></div></div>
         <div class="sx-status-copy">
@@ -541,20 +607,13 @@
         ${VitalTile({ label: 'Latest sleep period', value: surfaceSleep ? surfaceSleep.title.replace(/ lunar-surface sleep period/, ' surface sleep') : 'None yet', unit: '', icon: 'moon', status: surfaceSleep ? 'warn' : 'good', note: surfaceSleep ? 'Displaced · crew-reported' : 'Before lunar landing' })}
       </section>
       ${DecisionSupport(s)}
-      ${organDetail(shown, organs, 'sim', s)}
       ${ChartCard({ kicker: 'HEART RATE', label: `${crewMember().name} · last 48 hours`, meta: `AVG ${fmt0(ENGINE.avg(hr))} BPM · shaded = moonwalk`, body: LineChart({ color: 'cyan', points: hr, eva: AHM.EVA_WINDOWS }) })}
-      <p class="sx-note">The averages NASA reported are ${cite(['apollo15_mr'], 'Section 10.1')}; the line between them is interpolated, and values with no report (for example Worden's heart rate) are estimated.</p>
-      <h3 class="sx-h3">All crew at this moment</h3>
-      <div class="card sx-board">${ENGINE.allCrewSnapshots(sim.hour).map((sn) => crewRowSim(sn, crewById(sn.crewId))).join('')}</div>
-      <h3 class="sx-h3">Mission log <small>${eventsSoFar('control').length} of ${ENGINE.DATA.events.length} events so far</small></h3>
-      <ul class="ev-list">${log.map((e) => EventItem(e, true)).join('') || '<li class="empty">Nothing yet. Press Simulate or drag the clock.</li>'}</ul>
-      ${ModernLayer(s)}
-      ${LimitsBlock()}`;
+      <p class="sx-note">The averages NASA reported are ${cite(['apollo15_mr'], 'Section 10.1')}; the line between them is interpolated, and values with no report (for example Worden's heart rate) are estimated.</p>`;
   }
 
   function ModernLayer(s) {
     const m = s.modern;
-    return `<details class="sx-details" data-key="modern" ${state.open.modern ? 'open' : ''}>
+    return `<details class="sx-details" data-key="modern" ${state.open.modern !== false ? 'open' : ''}>
       <summary><span>Modern monitoring layer</span><span class="ev ev-sim">SIMULATED · not measured on Apollo 15</span></summary>
       <p class="sx-note">Apollo's body sensors measured only heart rhythm (ECG) and breathing. Today's wearables add the signals below. These numbers are generated by this app to show what a current system would add.</p>
       <section class="sx-grid4">
@@ -573,7 +632,7 @@
       ['Immune changes', 'Need weeks to months of exposure and lab work. Apollo 15 has no usable in-flight record.'],
       ['Isolation and confinement', 'Effects grow with duration. A 12-day mission with a 1.3 s link barely tests them.'],
     ];
-    return `<details class="sx-details" data-key="limits" ${state.open.limits ? 'open' : ''}>
+    return `<details class="sx-details" data-key="limits" ${state.open.limits !== false ? 'open' : ''}>
       <summary><span>What this 12-day replay cannot show</span></summary>
       ${rows.map(([t, d]) => `<div class="sx-row"><strong>${t}</strong><span>${d}</span></div>`).join('')}
     </details>`;
@@ -595,31 +654,28 @@
 
   function pageAstronaut() {
     const c = demoCtx();
-    return `<section class="sx-head">
+    return `<section class="sx-head compact">
         <div><div class="eyebrow">01 · DEMO ASTRONAUT</div><h1>Your health, <em>at a glance</em></h1>
-        <p>Live vitals come from a placeholder datasheet that updates every 3 seconds, standing in for real sensors. This page uses no Apollo 15 data; open <a href="#simulation">Apollo 15 Simulation</a> for the mission replay.</p></div>
+        <p>Live vitals from a placeholder datasheet, updated every 3 seconds. No Apollo 15 data here; that is on the <a href="#simulation">Apollo 15</a> page.</p></div>
+        <div class="sx-head-tools"><span class="sn-label">CREW MEMBER</span>${crewChips()}</div>
       </section>
-      <div class="sx-controls">${crewChips()}</div>
       <div class="sx-split">
         <aside class="sx-side" aria-label="Body map"><div id="side-body">${sideHtml(c)}</div></aside>
-        <div class="sx-main">
-          <div id="feed-body">${feedHtml()}</div>
-          <div id="live-body">${demoBody(c)}</div>
-        </div>
-      </div>
-      <section id="checkin-body">${checkinBlock()}</section>`;
+        <div class="sx-main"><div id="tab-bar">${tabBar()}</div><div id="live-body">${astroPane(c)}</div></div>
+      </div>`;
   }
 
   function pageSimulation() {
     const c = simCtx();
-    return `<section class="sx-head">
-        <div><div class="eyebrow">03 · APOLLO 15 SIMULATION · REAL 1971 RECORD</div><h1>Replay the <em>mission</em></h1>
-        <p>Press Simulate to replay Apollo 15's real biomedical record. Status, alerts, the body map and the log all follow the mission clock. The live demo feed is not used here.</p></div>
+    return `<section class="sx-head compact">
+        <div><div class="eyebrow">03 · APOLLO 15 · REAL 1971 RECORD</div><h1>Replay the <em>mission</em></h1>
+        <p>Press Simulate. Status, alerts, the body map and the log all follow the mission clock.</p></div>
+        <div class="sx-head-tools"><span class="sn-label">CREW MEMBER</span>${crewChips()}</div>
       </section>
-      <div class="sx-controls">${crewChips()}${tplSimBar()}</div>
-      <div class="sx-split">
+      ${tplSimBar()}
+      <div class="sx-split has-sim">
         <aside class="sx-side" aria-label="Body map"><div id="side-body">${sideHtml(c)}</div></aside>
-        <div class="sx-main"><div id="live-body">${simBody(c)}</div></div>
+        <div class="sx-main"><div id="tab-bar">${tabBar()}</div><div id="live-body">${simPane(c)}</div></div>
       </div>`;
   }
 
@@ -692,7 +748,7 @@
     return `<h3 class="sx-h3">Crew status <small>placeholder live feed</small></h3>
       <div class="card sx-board">${ENGINE.CREW.map((c) => crewRowLive(c)).join('')}</div>
       <h3 class="sx-h3">Live alerts</h3>
-      ${liveAll.length ? liveAll.map((a) => liveAlertCard(a, true)).join('') : '<div class="empty">No live alerts. Open Demo Astronaut and press "Demo: jump to next alert" to see one.</div>'}
+      ${liveAll.length ? liveAll.map((a) => liveAlertCard(a, true)).join('') : '<div class="empty">All quiet. No live alerts right now.<br><br><button class="btn secondary compact" data-act="skip-alert" type="button">Trigger a demo alert</button></div>'}
       <h3 class="sx-h3">Live heart rate by crew <small>last 30 readings, one every ${Math.round(LIVE.intervalMs / 1000)} s</small></h3>
       <section class="sx-grid3">${ENGINE.CREW.map((c) => {
         const pts = LIVE.history(c.id).map((r, i) => ({ x: i, y: r.hr }));
@@ -704,9 +760,9 @@
   }
 
   function pageControl() {
-    return `<section class="sx-head">
+    return `<section class="sx-head compact">
         <div><div class="eyebrow">02 · DEMO MISSION CONTROL</div><h1>The whole crew, <em>one screen</em></h1>
-        <p>Flight surgeons see all three astronauts' live vitals, the alerts that opened and what each astronaut was told. The numbers are a placeholder datasheet; the Apollo 15 mission lives on <a href="#simulation">Apollo 15 Simulation</a>.</p></div>
+        <p>All three astronauts' live vitals, the alerts that opened and what each was told. Placeholder datasheet; the real mission is on <a href="#simulation">Apollo 15</a>.</p></div>
       </section>
       <div id="live-body">${controlLive()}</div>`;
   }
@@ -855,6 +911,39 @@
    * Render + wiring
    * ------------------------------------------------------------------ */
 
+  // Home page: a dot flies Apollo 15's path and the GET readout follows the real milestone times.
+  let mpRaf = 0;
+  function startMissionPath() {
+    cancelAnimationFrame(mpRaf);
+    const path = document.getElementById('mp-path'), dot = document.getElementById('mp-dot'), trail = document.getElementById('mp-trail');
+    if (!path || !dot || !trail) return;
+    const len = path.getTotalLength();
+    const stops = [[0, 0], [0.43, 104.708], [0.53, 171.623], [0.64, 223.8], [1, 295.198]];
+    const phases = [[0, 'Outbound to the Moon'], [0.43, 'On the lunar surface'], [0.53, 'Back in lunar orbit'], [0.64, 'Returning to Earth']];
+    const ms = Array.from(document.querySelectorAll('.mp-ms')), items = Array.from(document.querySelectorAll('.mp-legend li'));
+    ms.forEach((g) => { const p = path.getPointAtLength(len * Number(g.dataset.f)); g.setAttribute('transform', `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})`); });
+    trail.style.strokeDasharray = len;
+    const getAt = (f) => { for (let i = 1; i < stops.length; i++) if (f <= stops[i][0]) return stops[i - 1][1] + (stops[i][1] - stops[i - 1][1]) * (f - stops[i - 1][0]) / (stops[i][0] - stops[i - 1][0]); return stops[4][1]; };
+    const draw = (f) => {
+      const p = path.getPointAtLength(len * f);
+      dot.setAttribute('transform', `translate(${p.x.toFixed(1)} ${p.y.toFixed(1)})`);
+      trail.style.strokeDashoffset = len * (1 - f);
+      document.getElementById('mp-get').textContent = AHM.formatGet(getAt(f));
+      document.getElementById('mp-phase').textContent = phases.filter((x) => f >= x[0]).pop()[1];
+      let last = -1; items.forEach((li, i) => { if (f >= Number(li.dataset.f) - 0.002) last = i; });
+      items.forEach((li, i) => { li.classList.toggle('done', i < last); li.classList.toggle('now', i === last); });
+      ms.forEach((g, i) => g.classList.toggle('on', i <= last));
+    };
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { draw(0.43); return; }
+    const DUR = 24000, HOLD = 3000, t0 = performance.now();
+    const frame = (now) => {
+      if (!document.getElementById('mp-dot')) return;
+      draw(Math.max(0, Math.min(1, (Math.max(0, now - t0) % (DUR + HOLD)) / DUR)));
+      mpRaf = requestAnimationFrame(frame);
+    };
+    mpRaf = requestAnimationFrame(frame);
+  }
+
   const root = document.getElementById('app');
   let current = 'home';
 
@@ -878,6 +967,7 @@
     AHM_ICONS.hydrate(root);
     window.scrollTo({ top: 0 });
     document.title = `${NAV.find(([id]) => id === current)[1]} · Astronomican`;
+    if (current === 'home') startMissionPath();
   }
 
   // Make `from` look like `to` without recreating nodes that already match. Because the nodes survive,
@@ -914,14 +1004,15 @@
     if (current === 'astronaut') {
       const c = demoCtx();
       patch('side-body', sideHtml(c));
-      patch('feed-body', feedHtml());
-      patch('live-body', demoBody(c));
+      patch('tab-bar', tabBar());
+      if (state.tab !== 'checkin') patch('live-body', astroPane(c));   // leave the check-in form alone while someone types
     } else if (current === 'control') {
       patch('live-body', controlLive());
     } else {
       const c = simCtx();
       patch('side-body', sideHtml(c));
-      patch('live-body', simBody(c));
+      patch('tab-bar', tabBar());
+      patch('live-body', simPane(c));
     }
     const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
     set('sim-readout', AHM.formatGet(sim.hour));
@@ -935,6 +1026,24 @@
       const link = document.querySelector(`.sx-nav a[href="#${id}"]`);
       if (link && (id === 'control' || id === 'simulation')) { const html = navLinkHtml(id, label); if (link.innerHTML !== html) link.innerHTML = html; }
     });
+  }
+
+  // Swap the tab content (not a live patch) and keep the body map in step.
+  function refreshPane() {
+    const box = document.getElementById('live-body'), bar = document.getElementById('tab-bar');
+    if (!box || !bar) return;
+    const c = current === 'astronaut' ? demoCtx() : simCtx();
+    bar.innerHTML = tabBar();
+    box.innerHTML = current === 'astronaut' ? astroPane(c) : simPane(c);
+    AHM_ICONS.hydrate(bar); AHM_ICONS.hydrate(box);
+    patch('side-body', sideHtml(c));
+  }
+
+  function selectOrgan(val) {
+    state.organ = val;
+    if (current === 'astronaut') state.tab = 'body'; else if (current === 'simulation') state.simTab = 'body';
+    refreshPane();
+    if (window.innerWidth < 1000) { const bar = document.getElementById('tab-bar'); if (bar) bar.scrollIntoView({ block: 'start', behavior: 'smooth' }); }
   }
 
   function setHour(h) { sim.hour = Math.max(0, Math.min(TOTAL_HOURS, h)); renderLive(); }
@@ -968,9 +1077,11 @@
     if (!el || !root.contains(el)) return;
     const val = el.dataset.val;
     switch (el.dataset.act) {
-      case 'crew': state.crew = val; state.organ = null; render(); break;
+      case 'crew': { const y = window.scrollY; state.crew = val; state.organ = null; render(); window.scrollTo({ top: y }); break; }
+      case 'menu': { const top = document.getElementById('top'); const open = top.classList.toggle('open'); el.setAttribute('aria-expanded', open); break; }
+      case 'tab': if (current === 'astronaut') state.tab = val; else state.simTab = val; refreshPane(); break;
       case 'open-crew': state.crew = val; state.organ = null; if (location.hash === '#astronaut') render(); else location.hash = '#astronaut'; break;
-      case 'organ': state.organ = val; renderLive(); if (window.innerWidth < 900) document.getElementById('organ-detail').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); break;
+      case 'organ': selectOrgan(val); break;
       case 'skip-alert': LIVE.skipToNextAlert(state.crew); toast('Jumped the placeholder feed to the next alert'); break;
       case 'live-ack': LIVE.ackAlert(el.dataset.id); toast('Acknowledged. Your crewmates can see you are on it.'); break;
       case 'notice-ack': LIVE.ackNotice(el.dataset.id); toast('Thanks. The sender can see you saw it.'); break;
@@ -993,7 +1104,7 @@
 
   root.addEventListener('keydown', (ev) => {
     const g = ev.target.closest && ev.target.closest('[data-act="organ"]');
-    if (g && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); state.organ = g.dataset.val; renderLive(); const again = root.querySelector(`[data-act="organ"][data-val="${state.organ}"]`); if (again) again.focus(); }
+    if (g && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); selectOrgan(g.dataset.val); const again = root.querySelector(`.sx-stage [data-act="organ"][data-val="${state.organ}"]`); if (again && g.closest('.sx-stage')) again.focus(); else g.focus(); }
   });
 
   root.addEventListener('input', (ev) => {
