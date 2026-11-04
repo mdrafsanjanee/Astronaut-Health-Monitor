@@ -1,124 +1,84 @@
 /* ==========================================================================
-   shell.js
-   The whole application: hash router + every screen template (role select,
-   login, the astronaut/mission-control app shell and its 14 pages) plus
-   the GET replay control bar. Markup and class names follow the Figma
-   "Health Monitoring Application Design" export exactly; the data behind
-   every number comes from engine.js, which reads the real Apollo 15
-   dataset. No page here invents a figure the Figma file didn't already
-   show as a placeholder — placeholders are replaced with real or clearly
-   estimated mission data, never left as fiction.
+   shell.js - the whole app UI, kept deliberately small.
+
+   No login and no sidebar. One top bar with five pages:
+     #astronaut   one page: status, vitals, chart, timeline, check-in
+     #control     one page: crew board, alerts, charts, event log
+     #project     the detailed project description
+     #resources   the NASA challenge resources (published 15 Nov 2026) - data/resources.js
+     #references  APA references + "what data is used where"           - data/references.js
+
+   The numbers come from engine.js (which reads the real Apollo 15 dataset).
+   Old links such as #astronaut-dashboard or #control-alerts still work.
    ========================================================================== */
 
 (function () {
+  'use strict';
+
   const I = (name, size) => `<i data-icon="${name}" data-size="${size || 18}"></i>`;
   const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
   const fmt1 = (n) => (Math.round(n * 10) / 10).toFixed(1);
   const fmt0 = (n) => Math.round(n).toString();
 
-  const astronautNav = [['Dashboard', 'home'], ['Health Status', 'heart'], ['Activity', 'activity'], ['Sleep', 'moon'], ['Radiation', 'orbit'], ['Check-in', 'check'], ['Reports', 'report'], ['Settings', 'settings']];
-  const controlNav = [['Dashboard', 'home'], ['Crew Monitoring', 'crew'], ['Health Analytics', 'activity'], ['Mission Status', 'orbit'], ['Alerts', 'alert'], ['Reports', 'report'], ['Settings', 'settings']];
-  const slug = (label) => label.toLowerCase().replaceAll(' ', '-');
+  const REFS = window.AHM_REFS || { references: {}, cite: {}, dataUsed: [], generated: [], toVerify: [] };
+  const RES = window.AHM_RESOURCES || { publishDate: '2026-11-15', publishLabel: '15 November 2026', items: [], slots: [] };
 
-  /* ------------------------------------------------------------------ *
-   * Accounts + session (demo-grade, client-side only)
-   * crew-1 / crew-2 / crew-3 map to the three real Apollo 15 crew members.
-   * Change passwords here. Set SHOW_DEMO_HINT = false to hide the
-   * "Need access?" demo-credential hint on the login screen.
-   * ------------------------------------------------------------------ */
-
-  const ACCOUNTS = {
-    'crew-1': { password: '123', crewId: 'CDR' },   // David R. Scott
-    'crew-2': { password: '123', crewId: 'CMP' },   // Alfred M. Worden
-    'crew-3': { password: '123', crewId: 'LMP' },   // James B. Irwin
-  };
-  const SHOW_DEMO_HINT = true;
-  const SESSION_KEY = 'ahm.session';
-  let session = null;
-  try { session = JSON.parse(sessionStorage.getItem(SESSION_KEY)); } catch (e) { session = null; }
-  function saveSession(next) {
-    session = next;
-    try { if (next) sessionStorage.setItem(SESSION_KEY, JSON.stringify(next)); else sessionStorage.removeItem(SESSION_KEY); } catch (e) { /* storage blocked: in-memory only */ }
-  }
-  const myCrew = () => (session && session.crewId) || 'LMP';
-  const myCrewMember = () => ENGINE.CREW.find((c) => c.id === myCrew()) || ENGINE.CREW[2];
-
-  // Small UI state that must survive the live re-renders while the replay runs.
-  let trail = [];               // app pages visited this session (drives the Back button)
-  let flash = '';               // one-shot message on the login screen (e.g. after log out)
-  let alertFilter = 'all';
-  let crewSort = 'default';
-  let analyticsCrew = 'all';
-  let reportCat = 'All';
-  const reviewed = new Set();
-  const toggles = {};
-
-  function toast(msg) {
-    let t = document.getElementById('toast');
-    if (!t) { t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
-    t.textContent = msg;
-    t.classList.add('show');
-    clearTimeout(toast.timer);
-    toast.timer = setTimeout(() => t.classList.remove('show'), 2600);
-  }
-
-  function downloadFile(name, text, type) {
-    const url = URL.createObjectURL(new Blob([text], { type: `${type};charset=utf-8` }));
-    const a = document.createElement('a');
-    a.href = url; a.download = name;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-  }
-
-  /* ------------------------------------------------------------------ *
-   * Shared state: route + the GET replay clock
-   * ------------------------------------------------------------------ */
-
-  const TOTAL_HOURS = ENGINE.TOTAL_HOURS;
-  const sim = { hour: 0, playing: false, timer: null, speed: 8 };            // 8 GET-hours per real second
+  // The clock runs a little past the last telemetry row so the post-flight events (GET 295.3 to 295.6) can be reached.
+  const TOTAL_HOURS = Math.max(ENGINE.TOTAL_HOURS, ...ENGINE.DATA.events.map((e) => e.get_hours)) + 0.05;
+  const sim = { hour: 0, playing: false, timer: null, speed: 8 };   // 8 GET-hours per real second
   const TICK_MS = 200;
 
-  const visibleEvents = (role) => role === 'control' ? ENGINE.DATA.events : ENGINE.DATA.events.filter((e) => !e.crew_id || e.crew_id === myCrew());
+  const state = { crew: 'LMP', organ: null, open: {} };
+  const reviewed = new Set();
+
+  const NAV = [['home', 'Home'], ['astronaut', 'Demo Astronaut'], ['control', 'Demo Mission Control'], ['simulation', 'Apollo 15 Simulation'], ['project', 'Project'], ['resources', 'Resources'], ['references', 'References']];
+  const LIVE_PAGES = ['astronaut', 'control', 'simulation'];
+
+  const crewMember = () => ENGINE.CREW.find((c) => c.id === state.crew) || ENGINE.CREW[2];
+  const crewById = (id) => ENGINE.CREW.find((c) => c.id === id);
+  const shortName = (id) => ENGINE.crewShortName(crewById(id));
+
+  /* ------------------------------------------------------------------ *
+   * Events + citations
+   * ------------------------------------------------------------------ */
+
+  const visibleEvents = (role) => role === 'control' ? ENGINE.DATA.events : ENGINE.DATA.events.filter((e) => !e.crew_id || e.crew_id === state.crew);
   const eventsSoFar = (role) => visibleEvents(role).filter((e) => e.get_hours <= sim.hour);
   const activeNotices = (role) => visibleEvents(role).filter((e) => e.severity && sim.hour >= e.get_hours && sim.hour <= (e.active_until_hours ?? e.get_hours + 3));
 
-  function parseHash() {
-    const h = (location.hash || '#role').slice(1);
-    if (h === 'role' || h === 'astronaut-login' || h === 'control-login') return { screen: h };
-    const m = h.match(/^(astronaut|control)-(.+)$/);
-    if (m) return { screen: 'app', role: m[1], page: m[2] };
-    return { screen: 'role' };
+  // In-text APA citation, e.g. "(NASA, 1971, Section 10.2.3)"
+  function citeText(keys, where) {
+    keys = keys || [];
+    if (!keys.length) return '';
+    const parts = keys.map((k, i) => (REFS.cite[k] || k) + (i === 0 && where ? ', ' + where : ''));
+    return '(' + parts.join('; ') + ')';
+  }
+  const cite = (keys, where) => (keys && keys.length ? `<a class="cite" href="#references">${esc(citeText(keys, where))}</a>` : '');
+
+  function evidenceBadge(e) {
+    if (e.evidence === 'secondary') return '<span class="ev ev-sec" title="Narrative from non-NASA accounts; see References">Secondary source</span>';
+    if (e.evidence === 'estimated') return '<span class="ev ev-est" title="Exact time not in the sources used">Estimated time</span>';
+    return '<span class="ev ev-nasa">NASA source</span>';
   }
 
-  function navigate(hash) {
-    location.hash = hash;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  function EventItem(e, showCrew) {
+    const sev = e.severity === 'CRITICAL' ? 'critical' : e.severity ? 'warn' : '';
+    const who = showCrew ? (e.crew_id ? shortName(e.crew_id) : 'Mission') : '';
+    return `<li class="ev-item ${sev}">
+      <div class="ev-time">GET ${AHM.formatGet(e.get_hours)}${who ? `<small>${esc(who)}</small>` : ''}</div>
+      <div class="ev-main">
+        <div class="ev-title"><strong>${esc(e.title)}</strong>${evidenceBadge(e)}</div>
+        <p>${esc(e.detail)}</p>
+        <small class="ev-cite">Source: ${e.refs && e.refs.length ? cite(e.refs, e.where) : 'no source for the exact time (estimated)'}</small>
+      </div>
+    </li>`;
   }
 
   /* ------------------------------------------------------------------ *
    * Small shared pieces
    * ------------------------------------------------------------------ */
 
-  function Brand(compact) {
-    return `<div class="brand ${compact ? 'brand-compact' : ''}">
-      <div class="brand-mark"><div class="brand-orbit"></div><div class="brand-star"></div></div>
-      ${compact ? '' : '<div><div class="brand-name">ASTRONOMICAN</div><div class="brand-caption">HUMAN SYSTEMS // ORBITAL — APOLLO 15 REPLAY</div></div>'}
-    </div>`;
-  }
-
-  // `hidden` renders an empty spacer instead of a dead/disabled button (keeps the header grid aligned).
-  function BackButton(hidden) {
-    if (hidden) return '<span class="back-spacer" aria-hidden="true"></span>';
-    return `<button class="btn back-btn" data-act="back" type="button">${I('arrow')}Back</button>`;
-  }
-
-  function Breadcrumb(items) {
-    return `<div class="breadcrumb"><span>Astronomican</span>${items.map((i) => `<span>${esc(i)}</span>`).join('')}</div>`;
-  }
-
-  function StatusPill(text, tone) {
-    return `<span class="pill ${tone || 'good'}"><span></span>${esc(text)}</span>`;
-  }
+  const StatusPill = (text, tone) => `<span class="pill ${tone || 'good'}"><span></span>${esc(text)}</span>`;
 
   function MetricCard({ label, value, unit, status, change, icon }) {
     return `<div class="card metric-card">
@@ -128,8 +88,8 @@
     </div>`;
   }
 
-  // points: [{x,y}]; eva: [{start,end}] in the same x-domain; markerX: real-event x positions
-  function LineChart({ color = 'cyan', points, eva = [], markers = [] }) {
+  // points: [{x,y}]; eva: [{start,end}] in the same x-domain
+  function LineChart({ color = 'cyan', points, eva = [] }) {
     if (!points.length) return `<svg class="line-chart ${color}" viewBox="0 0 340 100"></svg>`;
     const xs = points.map((p) => p.x); const ys = points.map((p) => p.y);
     const x0 = xs[0], x1 = xs[xs.length - 1] || x0 + 1;
@@ -140,884 +100,920 @@
     const coords = points.map((p) => `${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ');
     const bands = eva.filter((w) => w.end >= x0 && w.start <= x1).map((w) =>
       `<rect class="eva-band" x="${sx(Math.max(w.start, x0)).toFixed(1)}" y="0" width="${Math.max(2, sx(Math.min(w.end, x1)) - sx(Math.max(w.start, x0))).toFixed(1)}" height="100"></rect>`).join('');
-    const dots = markers.filter((m) => m.x >= x0 && m.x <= x1).map((m) => {
-      const px = points.reduce((best, p) => Math.abs(p.x - m.x) < Math.abs(best.x - m.x) ? p : best, points[0]);
-      return `<circle class="marker" cx="${sx(m.x).toFixed(1)}" cy="${sy(px.y).toFixed(1)}" r="1"></circle>`;
-    }).join('');
-    return `<svg class="line-chart ${color}" preserveAspectRatio="none" viewBox="0 0 340 100">
+    return `<svg class="line-chart ${color}" preserveAspectRatio="none" viewBox="0 0 340 100" role="img" aria-label="Trend chart">
       <defs><linearGradient id="fill-${color}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".28"></stop><stop offset="1" stop-color="currentColor" stop-opacity="0"></stop></linearGradient></defs>
       <path class="grid-line" d="M0 20h340M0 50h340M0 80h340"></path>
       ${bands}
       <polygon fill="url(#fill-${color})" points="${coords} 340,100 0,100"></polygon>
       <polyline class="series" fill="none" points="${coords}"></polyline>
-      ${dots}
     </svg>`;
   }
 
-  function ChartCard({ kicker = 'TREND ANALYSIS', label, meta, body, axis }) {
+  function ChartCard({ kicker = 'TREND', label, meta, body }) {
     return `<div class="card chart-card">
       <div class="card-head"><div><span class="card-kicker">${esc(kicker)}</span><strong>${esc(label)}</strong></div><span class="chart-meta">${esc(meta)}</span></div>
-      <div class="chart-body${axis ? ' has-y' : ''}">${axis ? `<div class="chart-y">${axis.map((a) => `<span>${esc(a)}</span>`).join('')}</div>` : ''}${body}</div>
+      <div class="chart-body">${body}</div>
     </div>`;
   }
 
-  function ChartLegend(items) {
-    return `<div class="chart-legend">${items.map((it) => `<span><i class="sw-${it.sw}"></i>${esc(it.label)}</span>`).join('')}</div>`;
+  function toast(msg) {
+    let t = document.getElementById('toast');
+    if (!t) { t = document.createElement('div'); t.id = 'toast'; t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => t.classList.remove('show'), 2600);
   }
 
-  function timeAgo(hour, nowHour) {
-    const dh = nowHour - hour;
-    if (dh < 1 / 60) return 'just now';
-    if (dh < 1) return `${Math.round(dh * 60)}m ago`;
-    if (dh < 24) return `${Math.round(dh)}h ago`;
-    return `${Math.round(dh / 24)}d ago`;
-  }
+  const toneOf = (level) => level === 'NOMINAL' ? 'good' : level === 'ATTENTION' ? 'warn' : 'danger';
+  const overallWord = (o) => o === 'NOMINAL' ? 'Nominal' : o === 'ATTENTION' ? 'Review' : 'Critical';
 
   /* ------------------------------------------------------------------ *
-   * Screen: Role selection
+   * Top bar + replay bar
    * ------------------------------------------------------------------ */
 
-  const ROLE_KEY = 'ahm.role';
-  let selectedRole = 'astronaut';
-  try { const saved = sessionStorage.getItem(ROLE_KEY); if (saved === 'astronaut' || saved === 'control') selectedRole = saved; } catch (e) { /* storage unavailable */ }
-
-  function tplRoleSelect() {
-    const roleCard = (role, active, bullets, icon, label, title, code) => `
-      <button class="role-card ${active ? 'active' : ''}" role="radio" aria-checked="${active ? 'true' : 'false'}" tabindex="${active ? '0' : '-1'}" data-role="${role}" type="button">
-        <div class="role-card-top"><div class="role-icon">${I(icon, 28)}</div><span class="role-code">${label}</span><span class="radio-indicator">${active ? '<span></span>' : ''}</span></div>
-        <div class="role-title">${title}</div>
-        <div class="role-rule"></div>
-        <div class="role-bullets">${bullets.map((b) => `<div>${I('check', 15)}<span>${esc(b)}</span></div>`).join('')}</div>
-        <div class="role-card-footer">${active ? 'SELECTED' : 'SELECT ROLE'}<span>${code}</span></div>
-      </button>`;
-    return `<main class="entry-screen">
-      <div class="starfield"></div>
-      <header class="entry-header">${BackButton(true)}${Brand()}<div class="system-status"><span class="status-dot"></span>SYSTEM ONLINE</div></header>
-      <div class="entry-breadcrumb">${Breadcrumb(['Role selection'])}</div>
-      <section class="role-wrap">
-        <div class="eyebrow">ORBITAL HEALTH NETWORK // ACCESS PORTAL</div>
-        <div class="display-title">Welcome to Astronomican</div>
-        <p class="display-subtitle">Real Apollo 15 biomedical telemetry, replayed hour by hour</p>
-        <div class="challenge-badge"><span>NASA SPACE APPS 2026</span>Challenge: Create Health Monitoring Software for Astronauts on Space Missions</div>
-        <div class="role-grid" role="radiogroup" aria-label="Choose your role">
-          ${roleCard('astronaut', selectedRole === 'astronaut', ['Personal health monitoring', 'Mission performance tracking', 'Radiation and wellness monitoring'], 'user', 'Crew Member', 'ASTRONAUT', '01')}
-          ${roleCard('control', selectedRole === 'control', ['Crew monitoring', 'Mission oversight', 'Health analytics and alerts'], 'crew', 'Control Operator', 'MISSION CONTROL', '02')}
-        </div>
-        <button class="btn primary continue-btn" id="btn-continue" type="button">Continue as ${selectedRole === 'astronaut' ? 'Astronaut' : 'Mission Control'}${I('arrow')}</button>
-        <div class="entry-footnote">SECURE ACCESS • AUTHORIZED PERSONNEL ONLY • ASTRONOMICAN v4.2 · <a href="#about" id="link-about">About this replay</a></div>
-      </section>
-      ${tplAbout()}
-    </main>`;
+  function navLinkHtml(id, label) {
+    const open = id === 'control' ? LIVE.allActive().length : id === 'simulation' ? activeNotices('control').length : 0;
+    return `${label}${open ? `<span class="sx-badge" title="${open} active alert${open > 1 ? 's' : ''}">${open}</span>` : ''}`;
   }
 
-  function tplAbout() {
-    const ev = ENGINE.DATA.events.length;
-    const m = ENGINE.DATA.mission;
-    return `<section class="about-wrap" id="about">
-      <div class="about-head">
-        <div class="eyebrow">NASA SPACE APPS 2026 — PRE-SCREENING PROTOTYPE</div>
-        <h2>Replaying Apollo 15's real biomedical record</h2>
-        <p>Every event, timestamp and cited figure in this replay is drawn from NASA's own Apollo 15 Mission Report — including the real cardiac arrhythmia Lunar Module Pilot James Irwin experienced after lunar liftoff, and Mission Control's real decision about it.</p>
-      </div>
-      <div class="about-stats">
-        <div class="card about-stat"><span class="card-kicker">MISSION DURATION</span><strong>${AHM.formatGet(TOTAL_HOURS)}</strong><span>real GET, launch to splashdown</span></div>
-        <div class="card about-stat"><span class="card-kicker">CREW</span><strong>${m.crew_size} crew</strong><span>${ENGINE.CREW.map((c) => ENGINE.crewShortName(c)).join(' · ')}</span></div>
-        <div class="card about-stat"><span class="card-kicker">CITED EVENTS</span><strong>${ev} events</strong><span>sourced to NASA's own mission report</span></div>
-      </div>
-      <div class="about-grid">
-        <div class="card card-pad">
-          <span class="card-kicker">THE WORKFLOW</span><strong style="display:block;margin-top:6px;font-size:15px;">Monitor → detect → explain → act → record</strong>
-          <div class="workflow"><span class="step">MONITOR</span><span class="arrow">→</span><span class="step">DETECT</span><span class="arrow">→</span><span class="step">EXPLAIN</span><span class="arrow">→</span><span class="step">ACT</span><span class="arrow">→</span><span class="step">RECORD</span></div>
-          <p class="card-text">Irwin's EKG showed an abnormal rhythm (<strong>monitor</strong>); flight surgeon Dr. Charles Berry recognized it as serious (<strong>detect</strong>); leadership weighed what it meant for the mission (<strong>explain</strong>); Mission Control made a real call about what to do — and what to tell the crew (<strong>act</strong>) — and it's still documented and studied today (<strong>record</strong>).</p>
-        </div>
-        <div class="card card-pad">
-          <span class="card-kicker">PRIMARY DATA SOURCES</span>
-          <ul class="source-list">
-            <li>Apollo 15 Mission Report (MSC-07230), NASA, 1971 — Section 10, Biomedical Evaluation.</li>
-            <li>Apollo 15 Activities Timeline, Table 4-I — second-accurate EVA and liftoff timestamps.</li>
-            <li>Wikipedia, "Return of Apollo 15 to Earth" — cardiac-event narrative, cross-checked against flight directors' memoirs.</li>
-            <li>Delp MD, et al., arXiv:2208.00892 — PVC count and GET for Irwin's arrhythmia.</li>
-            <li>NASA SP-368, <em>Biomedical Results of Apollo</em> — Environmental Control System design.</li>
-          </ul>
-        </div>
-      </div>
-      <div class="about-foot">Apollo 15 Health Monitor Replay — a NASA Space Apps Challenge 2026 prototype. Historical figures are cited; anything computed for this simulator (score, modern-monitor estimates, dose curve) is clearly labeled where it appears. See README.md for full citations and corrections.</div>
-    </section>`;
-  }
+  const utcNow = () => new Date().toISOString().slice(11, 19);
 
-  /* ------------------------------------------------------------------ *
-   * Screen: Login
-   * ------------------------------------------------------------------ */
-
-  function tplLogin(role) {
-    const isA = role === 'astronaut';
-    const notice = flash; flash = '';
-    const help = isA
-      ? `Crew accounts are issued by flight operations.${SHOW_DEMO_HINT ? ' Demo accounts: <strong>crew-1</strong> (Scott), <strong>crew-2</strong> (Worden), <strong>crew-3</strong> (Irwin) — password <strong>123</strong>.' : ''}`
-      : 'Operator accounts are issued by flight operations. In this replay, any Operator ID and password will work.';
-    return `<main class="entry-screen login-screen">
-      <div class="starfield"></div>
-      <header class="entry-header">${BackButton(false)}${Brand()}<div class="system-status"><span class="status-dot"></span>ENCRYPTED CONNECTION</div></header>
-      <div class="entry-breadcrumb">${Breadcrumb(['Role selection', `${isA ? 'Astronaut' : 'Mission Control'} login`])}</div>
-      <section class="login-wrap">
-        <div class="login-visual" aria-label="${isA ? 'Astronaut mission patch illustration' : 'Mission control orbital illustration'}">
-          <div class="visual-grid"></div><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
-          <div class="planet">${I(isA ? 'user' : 'orbit', 48)}</div>
-          <div class="mission-tag">${isA ? 'CREW ACCESS' : 'GROUND SYSTEMS'}</div>
-          <div class="visual-data data-a">GET ${AHM.formatGet(sim.hour)}</div>
-          <div class="visual-data data-b">LINK STABLE</div>
-        </div>
-        <form class="login-panel" id="login-form" novalidate>
-          <div class="eyebrow">${isA ? 'CREW IDENTITY VERIFICATION' : 'OPERATIONS AUTHORIZATION'}</div>
-          <div class="login-title">${isA ? 'Astronaut' : 'Mission Control'} Login</div>
-          <p>Enter your secure credentials to access the Astronomican health network.</p>
-          ${notice ? `<div class="login-flash" role="status">${I('check', 14)}<span>${esc(notice)}</span></div>` : ''}
-          <div class="form-stack">
-            <label class="field"><span>${isA ? 'Astronaut ID' : 'Operator ID'}</span><input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="${isA ? 'crew-1' : 'MCO-7741'}" type="text" required></label>
-            <label class="field"><span>Password</span><input name="password" autocomplete="current-password" placeholder="Enter secure password" type="password" required></label>
-          </div>
-          <div class="login-error" id="login-error" role="alert" hidden></div>
-          <div class="login-options"><span><span class="status-dot"></span>Biometric verification ready</span><button class="link-btn" data-act="need-access" type="button">Need access?</button></div>
-          <div class="login-note" id="login-help" hidden>${help}</div>
-          <button class="btn primary login-submit" type="submit">Authenticate &amp; Enter${I('arrow')}</button>
-          <button class="btn secondary login-back" data-act="back" type="button">${I('arrow')}Back to role selection</button>
-          <div class="security-note">${I('shield')}<span>256-bit secure mission network<br>Session monitored by flight operations</span></div>
-        </form>
-      </section>
-    </main>`;
-  }
-
-  /* ------------------------------------------------------------------ *
-   * App shell (sidebar + topbar) + Simulate bar
-   * ------------------------------------------------------------------ */
-
-  function usesSimBar(page) {
-    return ['dashboard', 'health-status', 'activity', 'sleep', 'radiation', 'crew-monitoring', 'health-analytics', 'mission-status', 'alerts'].includes(page);
+  function tplTopbar(page) {
+    return `<header class="sx-top">
+      <a class="sx-brand" href="#home" aria-label="Astronomican home"><span class="brand-mark"><span class="brand-orbit"></span><span class="brand-star"></span></span><span class="sx-brand-name">ASTRONOMICAN</span></a>
+      <nav class="sx-nav" aria-label="Pages">
+        ${NAV.map(([id, label]) => `<a href="#${id}" class="${id === page ? 'active' : ''}" ${id === page ? 'aria-current="page"' : ''}>${navLinkHtml(id, label)}</a>`).join('')}
+      </nav>
+      <span class="sx-clock" title="Coordinated Universal Time">UTC <b id="utc-clock">${utcNow()}</b></span>
+    </header>`;
   }
 
   function tplSimBar() {
     const events = ENGINE.DATA.events;
-    const marks = events.map((e) => `<i style="left:${(e.get_hours / TOTAL_HOURS * 100).toFixed(2)}%;background:${e.severity === 'CRITICAL' ? 'var(--red)' : e.category === 'eva' ? 'var(--yellow)' : 'var(--line-strong)'}"></i>`).join('');
-    return `<div class="sim-bar">
-      <div class="sim-get"><span class="sim-label">GET</span><div><strong id="sim-readout">${AHM.formatGet(sim.hour)}</strong><br><small>Day ${ENGINE.missionDay(sim.hour)} of ${ENGINE.missionTotalDays()}</small></div></div>
-      <div class="sim-controls">
-        <button class="btn filter-btn" id="sim-reset" title="Jump to launch" type="button">${I('reset', 15)}</button>
-        <button class="btn filter-btn" id="sim-back" title="Back 6h" type="button">−6h</button>
-        <button class="btn primary ${sim.playing ? 'is-playing' : ''}" id="sim-play" type="button">${I(sim.playing ? 'pause' : 'play', 14)}${sim.playing ? 'Pause' : 'Simulate'}</button>
-        <button class="btn filter-btn" id="sim-fwd" title="Forward 6h" type="button">+6h</button>
-      </div>
-      <div class="sim-scrub"><div class="sim-ticks">${marks}</div><input id="sim-range" max="${TOTAL_HOURS}" min="0" step="0.05" type="range" value="${sim.hour}"></div>
-      <div class="sim-jump"><label>JUMP TO</label><select class="select-ctl" id="sim-jump"><option value="">Mission event…</option>${events.map((e) => `<option value="${e.get_hours}">GET ${AHM.formatGet(e.get_hours)} — ${esc(e.title)}</option>`).join('')}</select></div>
+    return `<div class="sx-sim" role="group" aria-label="Mission replay clock">
+      <span class="sx-sim-label">APOLLO 15 REPLAY</span>
+      <button class="btn primary sx-play ${sim.playing ? 'is-playing' : ''}" id="sim-play" type="button" title="Replay the Apollo 15 mission">${I(sim.playing ? 'pause' : 'play', 14)}<span>${sim.playing ? 'Pause' : 'Simulate'}</span></button>
+      <div class="sx-get"><span>GET</span><strong id="sim-readout">${AHM.formatGet(sim.hour)}</strong><small id="sim-day">Day ${ENGINE.missionDay(sim.hour) + 1} of ${ENGINE.missionTotalDays()}</small></div>
+      <input class="sx-range" id="sim-range" type="range" min="0" max="${TOTAL_HOURS}" step="0.05" value="${sim.hour}" aria-label="Mission time in hours">
+      <select class="select-ctl" id="sim-jump" aria-label="Jump to a mission event"><option value="">Jump to Apollo 15 event…</option>${events.map((e) => `<option value="${e.get_hours}">GET ${AHM.formatGet(e.get_hours)} · ${esc(e.title)}</option>`).join('')}</select>
     </div>`;
   }
 
-  function tplShell(role, page) {
-    const nav = role === 'astronaut' ? astronautNav : controlNav;
-    const title = (nav.find(([l]) => slug(l) === page) || (page === 'alerts' ? ['Alerts'] : nav[0]))[0];
-    const me = myCrewMember();
-    const openAlerts = activeNotices(role).length;
-    return `<main class="app-shell">
-      <aside class="sidebar">
-        ${Brand()}
-        <div class="side-label">${role === 'astronaut' ? 'CREW SYSTEMS' : 'FLIGHT OPERATIONS'}</div>
-        <nav class="side-nav">
-          ${nav.map(([label, icon]) => `<button class="btn ${slug(label) === page ? 'active' : ''}" data-nav="${role}-${slug(label)}" type="button">${I(icon)}<span>${label}</span>${label === 'Alerts' && openAlerts ? `<span class="nav-count">${openAlerts}</span>` : ''}</button>`).join('')}
-        </nav>
-        <div class="side-mission">
-          <div class="side-mission-top"><span>MISSION</span><span class="online-label">${sim.hour >= TOTAL_HOURS ? 'COMPLETE' : 'NOMINAL'}</span></div>
-          <div class="mission-name">APOLLO 15</div>
-          <div class="mission-progress"><span style="width:${Math.min(100, sim.hour / TOTAL_HOURS * 100).toFixed(1)}%"></span></div>
-          <div class="side-mission-meta"><span>DAY ${ENGINE.missionDay(sim.hour)}</span><span>${Math.min(100, Math.round(sim.hour / TOTAL_HOURS * 100))}%</span></div>
-        </div>
-        <div class="side-user">
-          <div class="avatar">${I('user')}</div>
-          <div><strong>${role === 'astronaut' ? esc(me.name) : 'Flight Director'}</strong><span>${role === 'astronaut' ? esc(me.role) : 'Mission Control, Houston'}</span></div>
-          <span class="status-dot"></span>
-        </div>
-        <button class="btn secondary side-logout" data-act="logout" type="button">${I('logout', 15)}<span>Log out</span></button>
-      </aside>
-      <section class="workspace">
-        <header class="topbar">
-          <div>${BackButton(trail.length < 2)}${Breadcrumb([role === 'astronaut' ? 'Astronaut' : 'Mission Control', title])}</div>
-          <div class="topbar-actions">
-            <div class="sync-status"><span class="status-dot ${sim.playing ? 'live' : ''}"></span> ${sim.playing ? 'REPLAYING' : 'PAUSED'} <strong>GET ${AHM.formatGet(sim.hour)}</strong></div>
-            <button class="btn icon-btn" data-nav="${role}-alerts" title="Alerts" aria-label="Alerts${openAlerts ? ` (${openAlerts} active)` : ''}" type="button">${I('alert')}${openAlerts ? '<span class="notification-ping"></span>' : ''}</button>
-            <button class="btn icon-btn" data-nav="${role}-settings" title="Settings" aria-label="Settings" type="button">${I('settings')}</button>
-            <button class="btn logout-btn" data-act="logout" title="Log out" type="button">${I('logout', 15)}<span>Log out</span></button>
-          </div>
-        </header>
-        <div class="workspace-content" id="workspace-content">${tplPageWrap(role, page, title)}</div>
-      </section>
-    </main>`;
-  }
-
-  function tplPageWrap(role, page, title) {
-    return `<div class="page-heading">
-        <div><div class="eyebrow">${role === 'astronaut' ? 'PERSONAL HEALTH SYSTEM' : 'MISSION OPERATIONS'} // ${title.toUpperCase()}</div><div class="page-title">${title}</div></div>
-        <div class="page-tools"><span class="range-label">GET REPLAY</span><span class="range-chip">Apollo 15 · full mission</span><button class="btn export-btn" data-act="print" title="Print or save this page as PDF" type="button">${I('download')} Export</button></div>
-      </div>
-      ${usesSimBar(page) ? tplSimBar() : ''}
-      <div id="page-body">${pageRouter(role, page)}</div>`;
-  }
-
   /* ------------------------------------------------------------------ *
-   * Astronaut pages
+   * Page: Home (landing)
    * ------------------------------------------------------------------ */
 
-
-  function AstronautDashboard() {
-    const s = ENGINE.crewSnapshot(myCrew(), sim.hour);
-    const [title, copy] = ENGINE.scoreCopy(s.score);
-    const alerts = activeNotices('astronaut');
-    const hrSeries = ENGINE.series(myCrew(), sim.hour, 48, 'heart_rate_bpm');
-    const rrSeries = ENGINE.series(myCrew(), sim.hour, 48, 'respiration_rate');
-    const tone = s.score >= 90 ? 'good' : s.score >= 75 ? '' : s.score >= 55 ? 'is-warn' : 'is-danger';
-    return `<section class="hero-grid">
-        <div class="card health-hero ${tone}">
-          <div class="score-ring" style="--ring-p:${s.score};${s.score < 90 ? '--ring-c:var(--orange)' : ''}"><div><strong>${s.score}</strong><span>/ 100</span></div></div>
-          <div class="health-copy"><span class="card-kicker">OVERALL HEALTH SCORE</span><strong>${title}</strong><p>${copy}</p>${StatusPill(alerts.length ? `${alerts.length} active notice${alerts.length > 1 ? 's' : ''}` : 'All systems nominal', alerts.length ? 'warn' : 'good')}<span class="derived-note">Score is computed from real HR/RR bands and active events — see engine.js.</span></div>
-          <div class="hero-scan"></div>
-        </div>
-        <div class="card mission-hero">
-          <div class="mission-hero-head"><span>MISSION STATUS</span>${StatusPill(sim.hour >= TOTAL_HOURS ? 'Complete' : 'Nominal', 'good')}</div>
-          <div class="mission-hero-title">APOLLO 15 <span>• ${sim.hour < 104.7 ? 'TRANSLUNAR' : sim.hour < 240 ? 'LUNAR SURFACE / ORBIT' : 'TRANSEARTH'}</span></div>
-          <div class="hero-stats">
-            <div><small>MISSION DAY</small><strong>${ENGINE.missionDay(sim.hour)}</strong></div>
-            <div><small>GET</small><strong>${AHM.formatGet(sim.hour)}</strong><span>H:MM</span></div>
-            <div><small>COMPLETE</small><strong>${Math.round(sim.hour / TOTAL_HOURS * 100)}%</strong><span>OF MISSION</span></div>
+  function pageHome() {
+    const ev = ENGINE.DATA.events.length;
+    const days = 12; // Apollo 15 flew 12.3 days (295.6 h)
+    const words = ['Monitor', 'Detect', 'Explain', 'Act', 'Record', 'Apollo 15 · 1971', 'Real NASA data', 'Every number cited', 'Onboard decision support', 'NASA Space Apps 2026'];
+    const track = words.concat(words).map((w) => `<span>${esc(w)}</span>`).join('');
+    const tile = (n, href, title, copy, cls) => `<a class="tile-link ${cls || ''}" href="${href}"><span class="tile-no">${n}</span><h3>${title}</h3><p>${copy}</p><span class="tile-go">Open <span aria-hidden="true">→</span></span></a>`;
+    const step = (n, t, d) => `<div class="step5"><b>0${n}</b><h3>${t}</h3><p>${d}</p></div>`;
+    return `<section class="hero">
+        <div>
+          <div class="eyebrow"><i aria-hidden="true"></i>NASA SPACE APPS 2026 · HEALTH MONITORING</div>
+          <h1>Keep every astronaut <em>healthy</em>, even when Earth is far away.</h1>
+          <p class="hero-lead">Astronomican watches vitals, flags what changed, explains it in plain words and tells the crew what to do next. It is tested on Apollo 15's real 1971 medical record, with every figure traced to a source.</p>
+          <div class="hero-cta">
+            <a class="btn primary" href="#simulation">Replay Apollo 15 <span class="arr" aria-hidden="true">↗</span></a>
+            <a class="btn secondary" href="#astronaut">Try the astronaut demo</a>
+            <a class="btn secondary" href="#project">Read the project</a>
           </div>
-          <div class="mission-bar"><span style="width:${Math.min(100, sim.hour / TOTAL_HOURS * 100).toFixed(1)}%"></span></div>
+        </div>
+        <div class="hero-art" aria-hidden="true">
+          <svg viewBox="0 0 400 400">
+            <circle class="ring" cx="200" cy="200" r="190"/><circle class="ring dash" cx="200" cy="200" r="150"/><circle class="ring" cx="200" cy="200" r="104"/>
+            <path class="arc" d="M200 10A190 190 0 0 1 390 200"/>
+            <circle class="planet" cx="200" cy="200" r="58"/>
+            <path d="M150 200h24l10-22 18 46 12-24h36" fill="none" stroke="#b9a3ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <g class="sat"><circle cx="390" cy="200" r="7" fill="#8b5cf6"/><circle cx="390" cy="200" r="14" fill="none" stroke="#8b5cf6" stroke-opacity=".4"/></g>
+            <g class="sat2"><circle cx="200" cy="50" r="5" fill="#34d399"/></g>
+          </svg>
+          <div class="hero-readout r2"><span>Status</span><b>Nominal</b></div>
+          <div class="hero-readout"><span>Mission</span><b>${days} days</b></div>
         </div>
       </section>
-      <div class="section-title"><span>LIVE VITALS — ${esc(myCrewMember().name.toUpperCase())} (${myCrew()})</span><small>GET ${AHM.formatGet(sim.hour)}</small></div>
-      <section class="metric-grid six">
-        ${MetricCard({ label: 'Heart Rate', value: fmt0(s.assess.row.heart_rate_bpm), unit: 'BPM', icon: 'heart', status: s.assess.hrLevel === 'NOMINAL' ? 'good' : s.assess.hrLevel === 'ATTENTION' ? 'warn' : 'danger', change: s.assess.eva ? 'EVA exertion — expected' : `${s.assess.row.heart_rate_basis}` })}
-        ${MetricCard({ label: 'Blood Pressure (est.)', value: `${fmt0(s.modern.systolicBp)}/${fmt0(s.modern.systolicBp - 40)}`, unit: 'mmHg', icon: 'activity', status: 'good', change: 'Modern-monitor estimate' })}
-        ${MetricCard({ label: 'Oxygen Saturation (est.)', value: fmt1(s.modern.spo2), unit: 'SpO₂', icon: 'spark', status: 'good', change: '100% O₂ cabin' })}
-        ${MetricCard({ label: 'Skin Temperature (est.)', value: fmt1(s.modern.skinTemp), unit: '°C', icon: 'thermometer', status: 'good', change: 'Stable' })}
-        ${MetricCard({ label: 'Bone Density', value: `${fmt1(ENGINE.boneDensityPct(sim.hour))}%`, unit: 'MODELED', icon: 'activity', status: ENGINE.boneDensityPct(sim.hour) < -1 ? 'warn' : 'good', change: 'Endpoint real: −4% by splashdown' })}
-        ${MetricCard({ label: 'Respiration Rate', value: fmt1(s.assess.row.respiration_rate), unit: 'br/min', icon: 'bolt', status: s.assess.rrLevel === 'NOMINAL' ? 'good' : 'warn', change: s.assess.row.respiration_basis })}
+      <div class="ticker" aria-hidden="true"><div class="ticker-track">${track}</div></div>
+      <section class="stats" aria-label="Project at a glance">
+        <div class="stat"><b>${days}</b><span>Days replayed</span></div>
+        <div class="stat"><b>${ev}</b><span>Cited events</span></div>
+        <div class="stat"><b>${ENGINE.CREW.length}</b><span>Crew members</span></div>
+        <div class="stat"><b>5</b><span>NASA hazards covered</span></div>
       </section>
-      ${DecisionSupport(s)}
-      <section class="dashboard-bottom">
-        ${ChartCard({ label: 'Heart Rate — last 48h', meta: `AVG ${fmt0(ENGINE.avg(hrSeries))} BPM`, body: LineChart({ color: 'cyan', points: hrSeries, eva: AHM.EVA_WINDOWS }) })}
-        ${ChartCard({ label: 'Respiration — last 48h', meta: `AVG ${fmt1(ENGINE.avg(rrSeries))} br/min`, body: LineChart({ color: 'teal', points: rrSeries, eva: AHM.EVA_WINDOWS }) })}
-        ${AlertSummaryCard()}
+
+      <section class="home-sec">
+        <div class="sec-head"><div><span class="sn-label">01 — Explore</span><h2>Three ways <em>in</em></h2></div><p>Each page shows only one kind of data, so you always know what you are looking at.</p></div>
+        <div class="tiles">
+          ${tile('01', '#astronaut', 'Demo astronaut', 'Live vitals, a body map, step-by-step alerts, crewmate notices and a daily check-in.')}
+          ${tile('02', '#control', 'Demo mission control', 'All three crew on one board with live alerts and what each astronaut was told.')}
+          ${tile('03', '#simulation', 'Apollo 15 simulation', 'Press Simulate and watch the real mission unfold, including the heart-rhythm event.', 'feature')}
+        </div>
+      </section>
+
+      <section class="home-sec">
+        <div class="sec-head"><div><span class="sn-label">02 — Method</span><h2>From signal to <em>action</em></h2></div><p>Monitor, detect, explain, act, record.</p></div>
+        <div class="steps5">
+          ${step(1, 'Monitor', 'Heart rate, breathing, sleep, dose and a daily self-report.')}
+          ${step(2, 'Detect', 'Events and context, not only a number crossing a line.')}
+          ${step(3, 'Explain', 'Plain words on what changed and which hazard it relates to.')}
+          ${step(4, 'Act', 'Onboard suggestions; Mission Control can send and the crew acknowledges.')}
+          ${step(5, 'Record', 'A cited timeline with demo entries kept apart from history.')}
+        </div>
+      </section>
+
+      <section class="home-sec">
+        <div class="sec-head"><div><span class="sn-label">03 — Trust</span><h2>Honest about <em>data</em></h2></div><p>Every value wears a badge that says what kind it is.</p></div>
+        <div class="honest">
+          <div><span class="ev ev-nasa">NASA source</span><p>Stated in a NASA document and cited.</p></div>
+          <div><span class="ev ev-est">Estimated</span><p>Filled in where nothing was reported.</p></div>
+          <div><span class="ev ev-sec">Secondary</span><p>Non-NASA narrative, flagged until verified.</p></div>
+          <div><span class="ev ev-sim">Simulated</span><p>Generated to show what a modern system adds.</p></div>
+          <div><span class="ev ev-live">Live · placeholder</span><p>The datasheet standing in for real sensors.</p></div>
+          <div><span class="ev ev-demo">Demo</span><p>Interactive inputs, never mixed into the record.</p></div>
+        </div>
+      </section>
+
+      <section class="cta-band">
+        <h2>Watch a <em>12-day mission</em> unfold in under a minute.</h2>
+        <div class="hero-cta" style="margin-top:0"><a class="btn primary" href="#simulation">Start the replay <span class="arr" aria-hidden="true">↗</span></a><a class="btn secondary" href="#references">See the sources</a></div>
       </section>`;
   }
 
-  const isArrhythmia = (s) => s.assess.alerts.some((a) => /arrhythmia/i.test(a.title));
+  /* ------------------------------------------------------------------ *
+   * Page: Astronaut
+   * ------------------------------------------------------------------ */
 
-  // Autonomy layer: latency argument (only during the cardiac event) + rule-based suggested actions.
+  function crewChips() {
+    return `<div class="sx-chips" role="group" aria-label="Crew member">${ENGINE.CREW.map((c) =>
+      `<button class="sx-chip ${c.id === state.crew ? 'active' : ''}" data-act="crew" data-val="${c.id}" type="button" aria-pressed="${c.id === state.crew}"><b>${c.photo_initials}</b><span>${esc(ENGINE.crewShortName(c))}<small>${esc(c.role)}</small></span></button>`).join('')}</div>`;
+  }
+
   function DecisionSupport(s) {
-    const acts = ENGINE.advise(s, ENGINE.latestCheckin(sim.hour, myCrew()));
+    const acts = ENGINE.advise(s, null);
+    const arr = s.assess.alerts.some((a) => /arrhythmia/i.test(a.title));
     const banner = (cls, icon, kicker, body) => `<div class="insight-banner ${cls}"><div class="insight-icon">${I(icon)}</div><div><span>${kicker}</span><strong>${body}</strong></div></div>`;
-    return (isArrhythmia(s) ? banner('', 'orbit', 'WHY ONBOARD DECISION SUPPORT',
-        'Houston was ~1.3 s away for this call, so flight surgeons could weigh in live. A Mars crew facing the same event would wait up to ~22 min each way and have to decide alone.') : '')
+    return (arr ? banner('', 'orbit', 'WHY ONBOARD DECISION SUPPORT',
+        'Houston was about 1.3 s away for this call, so flight surgeons could weigh in live. A Mars crew facing the same event would wait up to about 22 min each way and have to decide alone.') : '')
       + banner(acts.length ? 'is-message' : '', 'spark', 'SUGGESTED ACTION · ONBOARD RULES',
         acts.length ? acts.map(esc).join('<br>') : 'No action needed. Vitals and check-ins are within range.');
   }
 
-  // Duration-dependent risks a 12-day replay can't show: stated qualitatively, no invented data.
-  function LimitsCard() {
-    const rows = [['SANS (eye/brain pressure)', 'Builds over months; about 1 in 3 long-duration ISS astronauts show a finding. Not plausible in 12 days.'],
-      ['Bone loss', 'Only the real Apollo endpoint (about −4%) is shown; the curve is modeled, and multi-month loss is far larger.'],
-      ['Immune dysregulation', 'Needs weeks to months of exposure and lab work; Apollo 15 has no usable in-flight record.'],
-      ['Isolation and confinement', 'Psychological effects grow with duration; a 12-day mission with a 1.3 s link barely tests them.']];
-    return `<div class="card timeline-card"><div class="card-head"><div><span class="card-kicker">SCOPE OF THIS REPLAY</span><strong>Beyond 13 days: risks this dataset cannot show</strong></div></div>
-      ${rows.map(([t, d]) => `<div class="progress-row"><div><strong>${t}</strong><span>${d}</span></div></div>`).join('')}</div>`;
+  /* ------------------------------------------------------------------ *
+   * Body map (interactive avatar) + organ details
+   * ------------------------------------------------------------------ */
+
+  const LEVEL = { NOMINAL: 'ok', ATTENTION: 'watch', CRITICAL: 'alert' };
+  const LEVEL_WORD = { ok: 'Normal', watch: 'Attention', alert: 'Critical', none: 'No data flagged' };
+  const LEVEL_RANK = { none: 0, ok: 1, watch: 2, alert: 3 };
+  const LEVEL_TONE = { ok: 'good', watch: 'warn', alert: 'danger', none: 'info' };
+  const worse = (a, b) => (LEVEL_RANK[b] > LEVEL_RANK[a] ? b : a);
+  const ORGAN_NAMES = { heart: 'Heart and circulation', lungs: 'Lungs and breathing', brain: 'Brain, sleep and mood', msk: 'Bones and muscle', digestive: 'Stomach and gut', kidneys: 'Kidneys and hydration', rad: 'Whole body: radiation and temperature' };
+
+  // A check-in counts for two hours; after that the body map stops using it.
+  function recentCheckin(crew) {
+    const rows = AHM.readDemoLog().filter((e) => e.type === 'checkin' && e.crewId === crew && Date.now() - e.time < 2 * 3600 * 1000);
+    return rows.length ? rows[rows.length - 1] : null;
   }
 
-  // Crew self-report (symptoms, mood, dosimeter). Saved to the demo log, kept apart from the real event record.
-  function CheckinPage() {
-    const rows = AHM.readDemoLog().filter((e) => e.type === 'checkin' && (!e.crewId || e.crewId === myCrew())).slice(-5).reverse();
-    const slider = (f, label) => `<div class="slider-row"><span>${label}</span><input type="range" min="1" max="5" value="3" data-f="${f}"><span class="val">3</span></div>`;
-    return `<div class="card composer"><div class="card-head"><div><span class="card-kicker">SELF-REPORT · GET ${AHM.formatGet(sim.hour)}</span><strong>Crew check-in</strong></div></div>
-        ${slider('mood', 'Mood (1 low – 5 high)')}${slider('fatigue', 'Fatigue (1–5)')}
-        <div class="field"><span>Symptoms (optional)</span><textarea id="ci-sym" placeholder="e.g. palpitations, headache, nausea"></textarea></div>
-        <div class="field"><span>Dosimeter reading (mSv, optional)</span><input id="ci-dose" type="number" min="0" step="0.1"></div>
-        <button class="btn primary" id="ci-save" type="button">${I('check', 14)} Log check-in</button></div>
-      <div class="card timeline-card"><div class="card-head"><div><span class="card-kicker">HISTORY</span><strong>Recent check-ins</strong></div></div>
-        ${rows.map((e) => `<div class="timeline-item"><small>GET ${AHM.formatGet(e.get_hours)}</small><strong>Mood ${e.mood}/5 · Fatigue ${e.fatigue}/5${e.dose != null ? ` · ${e.dose} mSv` : ''}</strong>${e.symptoms ? `<span>${esc(e.symptoms)}</span>` : ''}</div>`).join('') || '<div class="empty">No check-ins logged yet.</div>'}</div>`;
+  const insight = (cls, icon, kicker, body) => `<div class="insight-banner ${cls}"><div class="insight-icon">${I(icon)}</div><div><span>${kicker}</span><strong>${body}</strong></div></div>`;
+
+  // Suggested actions from a self-report only (the Apollo replay has its own advice in engine.js).
+  function checkinActions(ci) {
+    const out = [];
+    if (!ci) return out;
+    if (ci.fatigue >= 4) out.push('Fatigue reported: protect the next sleep period and defer non-critical tasks.');
+    if (ci.mood <= 2) out.push('Low mood reported: schedule a private call or crew debrief.');
+    if (ci.symptoms) out.push('Symptom logged: recheck your vitals in 1 hour and report it if it persists or worsens.');
+    return out;
   }
 
-  function AlertSummaryCard() {
-    const items = eventsSoFar('astronaut').slice(-4).reverse();
-    const iconFor = (cat) => ({ medical: 'alert', eva: 'orbit', 'mission-control-decision': 'crew', milestone: 'spark', sleep: 'moon', postflight: 'check' }[cat] || 'spark');
-    const toneFor = (e) => e.severity === 'CRITICAL' ? 'warning' : e.severity === 'ATTENTION' ? 'warning' : e.category === 'medical' ? 'warning' : 'info';
-    return `<div class="card alert-summary">
-      <div class="card-head"><div><span class="card-kicker">SYSTEM FEED</span><strong>Real Mission Events</strong></div><span class="alert-count">${eventsSoFar('astronaut').length}</span></div>
-      ${items.map((e) => `<div class="alert-item ${toneFor(e)}">${I(iconFor(e.category))}<div><strong>${esc(e.title)}</strong><span>${esc(ENGINE.EVENT_TAG_LABEL[e.category] || e.category)}</span></div><small>${timeAgo(e.get_hours, sim.hour)}</small></div>`).join('') || `<div class="empty">No events yet — GET ${AHM.formatGet(sim.hour)}</div>`}
-      <button class="btn text-btn" data-nav="astronaut-health-status" type="button">View full timeline ${I('arrow')}</button>
-    </div>`;
+  // What the app flags for each organ right now.
+  //   mode 'demo': the live placeholder feed and the latest check-in. No Apollo data.
+  //   mode 'sim' : the Apollo 15 replay at the current mission time. No live feed, no check-in.
+  function organStates(mode, s) {
+    const id = state.crew, hour = sim.hour, isSim = mode === 'sim';
+    const ci = isSim ? null : recentCheckin(id);
+    const sym = ci && ci.symptoms ? ci.symptoms : '';
+    const o = {};
+    ['heart', 'lungs', 'brain', 'msk', 'digestive', 'kidneys', 'rad'].forEach((k) => { o[k] = { level: 'none', reasons: [] }; });
+    const monitored = isSim ? ['heart', 'lungs', 'brain', 'msk', 'rad'] : ['heart', 'lungs', 'rad'].concat(ci ? ['brain'] : []);
+    monitored.forEach((k) => { o[k].level = 'ok'; });
+    const flag = (k, level, text) => { o[k].level = worse(o[k].level === 'none' ? 'ok' : o[k].level, level); o[k].reasons.push(text); };
+    const evText = (e) => `${esc(e.title)} (GET ${AHM.formatGet(e.get_hours)}) ${evidenceBadge(e)} <small>${cite(e.refs, e.where)}</small>`;
+    const symFlag = (k, re, label) => { if (re.test(sym)) flag(k, 'watch', `Check-in symptom: "${esc(sym)}" (${label}) <span class="ev ev-demo">DEMO</span>`); };
+
+    if (isSim) {
+      // heart
+      if (s.assess.hrLevel !== 'NOMINAL') flag('heart', LEVEL[s.assess.hrLevel], `Heart rate ${fmt0(s.assess.row.heart_rate_bpm)} bpm (${s.assess.row.heart_rate_basis}) is outside the expected band.`);
+      activeNotices('astronaut').filter((e) => /arrhythmia/i.test(e.title)).forEach((e) => flag('heart', LEVEL[e.severity === 'CRITICAL' ? 'CRITICAL' : 'ATTENTION'], evText(e)));
+      if ((id === 'CDR' || id === 'LMP') && hour >= 295.6) flag('heart', 'watch', `Post-flight exercise test: weaker response at high heart rates, about a week to recover <small>${cite(['apollo15_mr'], 'Section 10.3')}</small>`);
+      // lungs
+      if (s.assess.rrLevel !== 'NOMINAL') flag('lungs', LEVEL[s.assess.rrLevel], `Breathing rate ${fmt1(s.assess.row.respiration_rate)} per minute (${s.assess.row.respiration_basis}) is outside the expected band.`);
+      // brain: real sleep disruption in the last 24 h
+      ENGINE.DATA.events.filter((e) => e.category === 'sleep' && hour >= e.get_hours && hour <= e.get_hours + 24).forEach((e) => flag('brain', 'watch', evText(e)));
+      // bones and muscle
+      ENGINE.DATA.events.filter((e) => /aspirin/i.test(e.title) && (!e.crew_id || e.crew_id === id) && hour >= e.get_hours && hour <= e.get_hours + 24).forEach((e) => flag('msk', 'watch', evText(e)));
+      if (id === 'LMP' && hour >= 295.4) flag('msk', 'watch', `Heel-bone mineral change linked to bed-rest results <small>${cite(['apollo15_mr'], 'Section 10.4')}</small>`);
+    } else {
+      LIVE.active(id).forEach((a) => {
+        const k = a.metric === 'resp' ? 'lungs' : a.metric === 'temp' ? 'rad' : 'heart';
+        flag(k, a.level, `${esc(a.title)}: ${esc(a.value)} <span class="ev ev-live">LIVE · placeholder feed</span> <small>${cite(a.cite)}</small>`);
+      });
+      if (ci && ci.fatigue >= 4) flag('brain', 'watch', `Fatigue ${ci.fatigue}/5 reported at check-in <span class="ev ev-demo">DEMO</span>`);
+      if (ci && ci.mood <= 2) flag('brain', 'watch', `Mood ${ci.mood}/5 reported at check-in <span class="ev ev-demo">DEMO</span>`);
+      symFlag('heart', /palpit|chest|dizz|faint/i, 'heart');
+      symFlag('lungs', /breath|cough|wheez/i, 'lungs');
+      symFlag('brain', /head|dizz|confus|anxi/i, 'brain');
+      symFlag('msk', /back|shoulder|pain|muscle|joint|bone/i, 'bones and muscle');
+      symFlag('digestive', /nausea|vomit|stomach|appetite|diarr/i, 'stomach and gut');
+      symFlag('kidneys', /urin|kidney|thirst|dehydrat/i, 'kidneys');
+    }
+    return o;
   }
 
-  const ASTRO_DETAIL = {
-    'health-status': {
-      icon: ['heart', 'activity', 'activity', 'activity'],
-      chartTitle: 'Heart Rate History', chartField: 'heart_rate_bpm', chartColor: 'cyan',
-      metrics: (s) => [
-        ['Heart Rate', fmt0(s.assess.row.heart_rate_bpm), 'BPM', 'heart', s.assess.hrLevel === 'NOMINAL' ? 'good' : 'warn'],
-        ['Blood Pressure (est.)', `${fmt0(s.modern.systolicBp)}/${fmt0(s.modern.systolicBp - 40)}`, 'mmHg', 'activity', 'good'],
-        ['ECG Status', s.assess.alerts.some((a) => a.title.toLowerCase().includes('arrhythmia')) ? 'BIGEMINY' : 'SINUS RHYTHM', 'RHYTHM', 'activity', s.assess.alerts.some((a) => a.title.toLowerCase().includes('arrhythmia')) ? 'danger' : 'good'],
-        ['Bone Density', `${fmt1(ENGINE.boneDensityPct(s.hour))}%`, 'MODELED', 'activity', ENGINE.boneDensityPct(s.hour) < -1 ? 'warn' : 'good'],
-      ],
-      sections: (s) => [
-        ['Cardiovascular rhythm', s.assess.alerts.some((a) => a.title.toLowerCase().includes('arrhythmia')) ? 'Bigeminy flagged' : 'Normal sinus', s.assess.hrLevel === 'NOMINAL' ? 92 : 58, 'cyan'],
-        ['Respiratory function', s.assess.rrLevel, s.assess.rrLevel === 'NOMINAL' ? 88 : 55, 'teal'],
-        ['Skeletal / bone health', `${fmt1(ENGINE.boneDensityPct(s.hour))}% modeled loss`, Math.max(10, 100 + ENGINE.boneDensityPct(s.hour) * 15), 'violet'],
-      ],
-      summary: (s) => s.assess.alerts.length ? s.assess.alerts[0].detail : 'Cardiovascular and respiratory indicators are within the expected historical range for this mission phase.',
+  const CREW_FACTS = { CDR: { kcal: '2,801', lb: '2.75' }, CMP: { kcal: '2,372', lb: '3' }, LMP: { kcal: '2,568', lb: '5.5' } };
+
+  // Plain-language information per organ. "generic" applies anywhere; "apollo" is only shown in the Apollo 15 Simulation.
+  // The text lists possibilities, never a diagnosis.
+  const ORGAN_INFO = {
+    heart: {
+      does: 'Pumps blood around the body. Heart rate, blood pressure and rhythm all describe how hard it is working.',
+      generic: () => [
+        'A fast rate during exertion is expected. At rest it can reflect pain, stress, fever, dehydration or poor sleep.',
+        `High blood pressure can come from stress, pain, stimulants or a medical condition. A reading after rest tells you more than a single reading ${cite(['aha_bp'])}.`,
+        'An irregular rhythm such as bigeminy (paired beats with pauses) can have several causes. Flight surgeons decide which; this app cannot diagnose it.',
+        `Gravity changes make the body's organs adjust ${cite(['hrp_hazards'])}.`],
+      apollo: () => [],
+      act: { ok: 'No action needed. Keep your scheduled exercise and drink water.', watch: 'Rest, drink water and re-measure in 15 minutes. Report dizziness or palpitations.', alert: 'Repeat the measurement, limit exertion and contact the flight surgeon now.' }
     },
-    activity: {
-      metrics: (s) => {
-        const eva = s.assess.eva;
-        const level = { High: 88, 'Low–moderate': 45, Low: 18 }[s.modern.activity] || 20;
-        return [
-          ['Exertion Level', eva ? 'HIGH (EVA)' : level > 30 ? 'MODERATE' : 'LOW', '', 'activity', 'good'],
-          ['Heart Rate', fmt0(s.assess.row.heart_rate_bpm), 'BPM', 'heart', 'good'],
-          ['EVA Status', eva ? `ACTIVE — ${eva.label}` : 'NOT IN EVA', '', 'bolt', eva ? 'warn' : 'good'],
-          ['Cumulative EVA Time', fmt1(AHM.EVA_WINDOWS.filter((w) => w.crew.includes(myCrew()) && w.start <= s.hour).reduce((sum, w) => sum + (Math.min(w.end, s.hour) - w.start), 0)), 'HOURS', 'orbit', 'good'],
-        ];
-      },
-      sections: (s) => {
-        const prog = (a, b) => s.hour >= b ? 100 : s.hour >= a ? Math.round((s.hour - a) / (b - a) * 100) : 0;
-        const label = (p) => p >= 100 ? 'Complete' : p > 0 ? 'In progress' : 'Not started';
-        const row = (t, p, c) => [t, label(p), p, c];
-        if (myCrew() === 'CMP') {
-          return [row('Solo lunar-orbit operations (SIM bay)', prog(104.708, 171.623), 'cyan'), row('Deep-space EVA on the return trip', prog(240.85, 241.15), 'violet')];
-        }
-        return [row('EVA-1: first Moon walk', prog(119.655, 126.2), 'cyan'), row('EVA-2: Hadley Rille traverse', prog(142.247, 149.45), 'teal'), row('EVA-3: Hadley Delta', prog(163.304, 168.134), 'violet')];
-      },
-      chartTitle: 'Heart Rate During Activity', chartField: 'heart_rate_bpm', chartColor: 'orange',
-      summary: () => myCrew() === 'CMP' ? 'Worden stayed in lunar orbit aboard Endeavour running the SIM-bay instruments, then made the first deep-space EVA on the trip home.' : `Irwin and Scott drove the Lunar Roving Vehicle ${27.9} km across all three EVAs — the first crewed use of the rover.`,
+    lungs: {
+      does: 'Move oxygen in and carbon dioxide out.',
+      generic: () => [
+        `Faster breathing can reflect exertion, anxiety, illness, or changes in cabin air such as higher CO2 ${cite(['ochmo_co2'])}.`,
+        'A sensor that has slipped or dried out can look like a change in the body. Check it before worrying.'],
+      apollo: () => [`Apollo measured breathing with a chest sensor. Early in the flight the signal shifted because air was trapped in the electrode sponges; the crew vented them ${cite(['apollo15_mr'], 'Section 10.1')}.`],
+      act: { ok: 'No action needed.', watch: 'Re-check the sensor, then re-measure at rest. Check cabin air if others feel the same.', alert: 'Contact the flight surgeon and check cabin air quality.' }
     },
-    sleep: {
-      metrics: (s) => {
-        const sl = AHM.eventsUpTo(ENGINE.DATA.events, s.hour).filter((e) => e.category === 'sleep').pop();
-        return [
-          ['Sleep Quality (est.)', fmt0(s.modern.sleepQuality), 'SCORE', 'moon', s.modern.sleepQuality >= 70 ? 'good' : 'warn'],
-          ['Most Recent Period', sl ? sl.title.replace(/^\d\w*\s/, '') : 'None logged yet', '', 'spark', 'good'],
-          ['Schedule Shift', sl ? (sl.detail.match(/about ([\d.]+ hours?)/) || [, '—'])[1] : '—', 'VS EARTH-NORMAL', 'activity', 'warn'],
-          ['Source', 'Real crew-reported', '', 'shield', 'good'],
-        ];
-      },
-      sections: (s) => [['1st lunar-surface sleep', 'Shifted ~2h', 78, 'violet', 107.5], ['2nd lunar-surface sleep', 'Cut short — O2 leak fix', 62, 'cyan', 130], ['3rd lunar-surface sleep', 'Shifted ~7h, cut to 6.5h', 54, 'teal', 155]]
-        .map(([t, v, p, c, at]) => s.hour >= at ? [t, v, p, c] : [t, 'Not reached yet', 0, c]),
-      chartTitle: 'Respiration During Rest', chartField: 'respiration_rate', chartColor: 'violet',
-      summary: () => 'All three lunar-surface sleep periods were displaced from the planned schedule — documented in the mission timeline, not estimated.',
+    brain: {
+      does: 'Controls alertness, mood and sleep.',
+      generic: () => [
+        'Short or shifted sleep lowers alertness and mood.',
+        `Isolation and confinement is one of NASA's five spaceflight hazards ${cite(['hrp_hazards'])}.`,
+        'Low mood or high fatigue at check-in is a prompt to talk to someone, not a diagnosis.'],
+      apollo: () => [`Apollo 15's lunar crew worked on their physiological reserves after displaced sleep ${cite(['apollo15_mr'], 'Section 10.2.3')}.`],
+      act: { ok: 'Keep a regular sleep schedule and stay in contact with the crew.', watch: 'Protect the next sleep period, defer non-critical tasks and talk with a crewmate.', alert: 'Tell the flight surgeon or behavioural-health support today.' }
     },
-    radiation: {
-      metrics: (s) => {
-        const doseMsv = s.modern.doseMrad * 0.01;
-        const weekly = Math.min(s.modern.doseEndpointMrad, s.modern.doseMrad) * 0.01 * (168 / Math.max(1, s.hour));
-        return [
-          ['Accumulated Dose', fmt1(doseMsv), 'mSv', 'orbit', 'good'],
-          ['Endpoint (real, postflight)', fmt1(s.modern.doseEndpointMrad * 0.01), 'mSv', 'orbit', 'good'],
-          ['Weekly Rate (modeled)', fmt1(weekly), 'mSv / wk', 'activity', weekly > 4 ? 'warn' : 'good'],
-          ['Passive Dosimeter', 'Read postflight only', '1971 HARDWARE', 'shield', 'good'],
-        ];
-      },
-      sections: (s) => [
-        ['Accumulated vs. real endpoint', `${Math.round(s.modern.doseMrad / s.modern.doseEndpointMrad * 100)}%`, Math.round(s.modern.doseMrad / s.modern.doseEndpointMrad * 100), 'cyan'],
-        ['Deep-space transit exposure', 'Elevated vs. LEO', 46, 'orange'],
-        ['Risk assessment', 'Low — within crew tolerance', 18, 'teal'],
-      ],
-      chartTitle: 'Modeled Dose Accumulation', chartField: null, chartColor: 'orange',
-      summary: (s) => `Endpoints are real: 510 mrad (Irwin), 360 mrad (Scott), 300 mrad (Worden, crew passive average). The curve between launch and splashdown is modeled — Apollo dosimeters were passive.`,
+    msk: {
+      does: 'Bones, joints and muscles. They adapt, and can weaken, in low gravity.',
+      generic: () => [
+        'Pain or soreness after a strain is worth reporting early.',
+        `On long missions bone loss can be larger; gravity fields are one of the five hazards ${cite(['hrp_hazards'])}.`],
+      apollo: () => [
+        `Scott strained his right shoulder during deep-core drilling and took aspirin ${cite(['apollo15_mr'], 'Sections 10.2.2 and 10.3')}.`,
+        `Bone-mineral scans after the flight found essentially no radius change; the report links the Lunar Module Pilot's heel-bone change to bed-rest results ${cite(['apollo15_mr'], 'Section 10.4')}.`],
+      act: { ok: 'Keep your scheduled exercise sessions.', watch: 'Note the pain, rest the area and report it at the next conference with the flight surgeon.', alert: 'Report the injury to the flight surgeon now and avoid loading the area.' }
     },
+    digestive: {
+      does: 'Digests food and absorbs nutrients.',
+      generic: () => ['Nutrition is one of the problems the challenge brief lists. Nausea, poor appetite or weight loss would be worth reporting.'],
+      apollo: (id) => [`Apollo 15 recorded no stomach or gut problem. ${shortName(id)} averaged ${CREW_FACTS[id].kcal} kcal per day ${cite(['apollo15_mr'], 'Section 10.2.7')} and lost ${CREW_FACTS[id].lb} lb by the post-flight exam ${cite(['apollo15_mr'], 'Section 10.3')}.`],
+      act: { ok: 'No action needed. Eat the planned meals.', watch: 'Log what you ate and how you feel, and report it if it lasts.', alert: 'Contact the flight surgeon.' }
+    },
+    kidneys: {
+      does: 'Filter blood and balance water and salts.',
+      generic: () => ['Low fluid intake can strain the heart and kidneys.', 'There is no kidney measurement in this prototype, so this region shows "no data flagged" rather than "normal".'],
+      apollo: () => [`The Apollo 15 report records in-suit drinking-water failures during the moonwalks, including the Lunar Module Pilot's device not delivering water ${cite(['apollo15_mr'], 'Section 10.2.6')}.`],
+      act: { ok: 'Drink on schedule.', watch: 'Drink water, log the symptom and report it if it lasts.', alert: 'Contact the flight surgeon.' }
+    },
+    rad: {
+      does: 'Radiation and body temperature affect the whole body, so they are shown here instead of on one organ.',
+      generic: () => [
+        `Space radiation is one of the five hazards ${cite(['hrp_hazards'])}.`,
+        `A raised temperature can be an early sign of illness, which spreads easily in a closed cabin ${cite(['hrp_hazards'])}; the live bands follow ${citeText(['nlm_temp'])}.`],
+      apollo: () => [`Personal dosimeters read 360 mrad (Commander) and 510 mrad (Lunar Module Pilot); passive dosimeters averaged 300 mrad, below the level of detectable medical effects ${cite(['apollo15_mr'], 'Section 10.2.4')}. The dose curve on the dose tile is modeled; only the totals are reported.`],
+      act: { ok: 'No action needed.', watch: 'Re-measure after resting. Follow the numbered steps in the alert if one is open.', alert: 'Contact the flight surgeon.' }
+    }
   };
 
-  function MetricDetailPage(page) {
-    const d = ASTRO_DETAIL[page] || ASTRO_DETAIL['health-status'];
-    const s = ENGINE.crewSnapshot(myCrew(), sim.hour);
-    const metrics = d.metrics(s);
-    const sections = d.sections(s);
-    const chartBody = d.chartField
-      ? LineChart({ color: d.chartTitle.includes('Rate') && page === 'health-status' ? 'cyan' : sections[0][3], points: ENGINE.series(myCrew(), sim.hour, 72, d.chartField), eva: AHM.EVA_WINDOWS })
-      : LineChart({ color: 'orange', points: Array.from({ length: 20 }, (_, i) => ({ x: i, y: Math.min(1, ((sim.hour / 20) * i) / TOTAL_HOURS) * s.modern.doseEndpointMrad })) });
-    return `<div class="insight-banner"><div class="insight-icon">${I('spark')}</div><div><span>ASTRONOMICAN INSIGHT</span><strong>${esc(d.summary(s))}</strong></div>${StatusPill('GET ' + AHM.formatGet(sim.hour), 'good')}</div>
-      <section class="metric-grid four">${metrics.map(([label, value, unit, icon, status]) => MetricCard({ label, value, unit, icon, status, change: status === 'danger' ? 'Flagged — under review' : status === 'warn' ? 'Outside expected band' : 'Within replay baseline' })).join('')}</section>
-      <section class="detail-layout">
-        <div class="card detail-sections">
-          <div class="card-head"><div><span class="card-kicker">DETAILED METRICS</span><strong>Performance breakdown</strong></div><span class="chart-meta">LIVE</span></div>
-          ${sections.map(([label, value, pct, color]) => `<div class="progress-row"><div><strong>${esc(label)}</strong><span>${esc(value)}</span></div><div class="progress ${color}"><span style="width:${Math.max(0, Math.min(100, pct))}%"></span></div><small>${Math.round(pct)}%</small></div>`).join('')}
-        </div>
-        ${ChartCard({ label: d.chartTitle, meta: 'REAL DATA', body: chartBody })}
-      </section>
-      ${HistoryTimeline(page)}
-      ${page === 'health-status' ? DecisionSupport(s) + LimitsCard() : ''}`;
-  }
-
-  function HistoryTimeline(page) {
-    const cats = page === 'health-status' ? ['medical', 'milestone'] : page === 'activity' ? ['eva'] : page === 'sleep' ? ['sleep'] : ['postflight', 'mission-control-decision'];
-    const items = eventsSoFar('astronaut').filter((e) => cats.includes(e.category)).slice(-5).reverse();
-    return `<div class="card timeline-card">
-      <div class="card-head"><div><span class="card-kicker">HISTORY</span><strong>${page === 'health-status' ? 'Health History Timeline' : 'Recent Events'}</strong></div></div>
-      <div class="timeline wrap">
-        ${items.map((e) => `<div class="timeline-item"><span class="timeline-dot ${e.severity ? 'danger' : ''}"></span><small>GET ${AHM.formatGet(e.get_hours)}</small><strong>${esc(e.title)}</strong><span class="event-tag event-tag--${e.category}">${esc(ENGINE.EVENT_TAG_LABEL[e.category] || e.category)}</span><span>${esc(e.detail)}</span><span class="event-source">Source: ${esc(e.source)}</span></div>`).join('') || `<div class="empty">Nothing recorded yet at GET ${AHM.formatGet(sim.hour)}.</div>`}
-      </div>
+  function organDetail(key, organs, mode, s) {
+    const info = ORGAN_INFO[key], o = organs[key], isSim = mode === 'sim';
+    let act;
+    if (isSim) {
+      const acts = key === 'heart' ? ENGINE.advise(s, null) : [];
+      act = acts.length ? acts.map(esc).join('<br>') : info.act[o.level === 'none' ? 'ok' : o.level];
+    } else {
+      const liveNow = LIVE.active(state.crew).some((a) => (key === 'heart' && (a.metric === 'hr' || a.metric === 'bp')) || (key === 'lungs' && a.metric === 'resp') || (key === 'rad' && a.metric === 'temp'));
+      act = (liveNow ? 'A live alert is open: follow the numbered steps in the Live vitals panel above. ' : '') + info.act[o.level === 'none' ? 'ok' : o.level];
+    }
+    const means = info.generic().concat(isSim ? info.apollo(state.crew) : []);
+    const empty = o.level === 'none'
+      ? (isSim ? 'Nothing recorded for this region in the Apollo 15 data.' : 'No live sensor feeds this region yet. A check-in symptom would flag it.')
+      : 'Nothing flagged at this time.';
+    return `<div class="card sx-organ st-${o.level}" id="organ-detail">
+      <div class="sx-organ-head"><div><span class="card-kicker">BODY DETAIL · ${isSim ? 'APOLLO 15 SIMULATION' : 'DEMO'} · ${esc(crewMember().name.toUpperCase())}</span><h3>${ORGAN_NAMES[key]}</h3></div>${StatusPill(LEVEL_WORD[o.level], LEVEL_TONE[o.level])}</div>
+      <p class="sx-organ-does">${info.does}</p>
+      <h5>Right now</h5>
+      ${o.reasons.length ? `<ul class="sx-list">${o.reasons.map((r) => `<li>${r}</li>`).join('')}</ul>` : `<p class="sx-note">${empty}</p>`}
+      <h5>What it might mean</h5>
+      <ul class="sx-list">${means.map((m) => `<li>${m}</li>`).join('')}</ul>
+      <h5>What to do</h5>
+      <p>${act}</p>
+      <small class="sx-note">These are possibilities for learning, not a diagnosis. Follow your flight surgeon.</small>
     </div>`;
   }
 
+  function avatarCard(o, shown) {
+    const grp = (key, shapes, labelHtml) => `<g class="org st-${o[key].level}${shown === key ? ' selected' : ''}" data-act="organ" data-val="${key}" role="button" tabindex="0" aria-pressed="${shown === key}" aria-label="${ORGAN_NAMES[key]}: ${LEVEL_WORD[o[key].level]}">${shapes}${labelHtml}</g>`;
+    const lab = (text, x, y, anchor, x1, x2) => `<line class="lead" x1="${x1}" y1="${y}" x2="${x2}" y2="${y}"></line><text class="lbl" x="${x}" y="${y + 4}" text-anchor="${anchor}">${text}</text>`;
+    const limbs = '<path class="shape" d="M108 118 Q80 126 72 162 L62 252 Q60 270 74 270 Q87 270 89 254 L101 178 Z"></path><path class="shape" d="M232 118 Q260 126 268 162 L278 252 Q280 270 266 270 Q253 270 251 254 L239 178 Z"></path>'
+      + '<path class="shape" d="M104 282 Q136 294 168 286 L162 410 Q160 450 146 458 L124 458 Q112 452 114 412 Z"></path><path class="shape" d="M236 282 Q204 294 172 286 L178 410 Q180 450 194 458 L216 458 Q228 452 226 412 Z"></path>'
+      + '<circle class="joint" cx="112" cy="124" r="5"></circle><circle class="joint" cx="228" cy="124" r="5"></circle><circle class="joint" cx="132" cy="296" r="5"></circle><circle class="joint" cx="208" cy="296" r="5"></circle><circle class="joint" cx="138" cy="392" r="5"></circle><circle class="joint" cx="202" cy="392" r="5"></circle>';
+    const svg = `<svg class="sx-body" viewBox="0 0 340 470" role="group" aria-label="Interactive body map. Select an organ for details.">
+      <g class="sil"><ellipse cx="170" cy="52" rx="32" ry="38"></ellipse><rect x="157" y="86" width="26" height="24" rx="6"></rect>
+        <path d="M110 112 Q170 96 230 112 Q242 130 240 190 L236 292 Q170 312 104 292 L100 190 Q98 130 110 112 Z"></path></g>
+      ${grp('msk', limbs, lab('Bones &amp; muscle', 332, 360, 'end', 226, 262))}
+      ${grp('kidneys', '<ellipse class="shape" cx="138" cy="232" rx="9" ry="15" transform="rotate(-14 138 232)"></ellipse><ellipse class="shape" cx="202" cy="232" rx="9" ry="15" transform="rotate(14 202 232)"></ellipse>', lab('Kidneys', 8, 232, 'start', 62, 128))}
+      ${grp('lungs', '<path class="shape" d="M164 120 C150 116 124 124 122 160 C120 190 126 206 144 204 C158 202 164 190 164 170 Z"></path><path class="shape" d="M176 120 C190 116 216 124 218 160 C220 190 214 206 196 204 C182 202 176 190 176 170 Z"></path>', lab('Lungs', 8, 150, 'start', 52, 124))}
+      ${grp('heart', '<path class="shape" d="M164 200 C144 180 138 164 148 154 C156 146 164 154 164 160 C164 154 172 146 180 154 C190 164 184 180 164 200 Z"></path>', lab('Heart', 332, 176, 'end', 182, 292))}
+      ${grp('digestive', '<path class="shape" d="M178 214 C198 208 212 222 206 240 C200 256 184 250 178 258 C170 250 170 228 178 214 Z"></path><path class="shape thick" d="M132 266 C132 250 208 250 208 266 C208 278 132 276 132 288"></path>', lab('Stomach &amp; gut', 332, 246, 'end', 214, 232))}
+      ${grp('brain', '<path class="shape" d="M142 46 C140 28 156 20 170 22 C184 20 200 28 198 46 C202 60 188 68 170 68 C152 68 138 60 142 46 Z"></path><path class="fold" d="M170 24 V66"></path>', lab('Brain', 8, 46, 'start', 52, 140))}
+    </svg>`;
+    return `<div class="card sx-avatar">
+      <div class="card-head"><div><span class="card-kicker">BODY MAP</span><strong>Tap an organ for details</strong></div></div>
+      ${svg}
+      <button class="sx-rad st-${o.rad.level}${shown === 'rad' ? ' selected' : ''}" data-act="organ" data-val="rad" type="button">Whole body · radiation &amp; temperature <b>${LEVEL_WORD[o.rad.level]}</b></button>
+      <ul class="sx-legend" aria-label="Colour key"><li><i class="st-alert"></i>Critical</li><li><i class="st-watch"></i>Attention</li><li><i class="st-ok"></i>Normal</li><li><i class="st-none"></i>No data flagged</li></ul>
+    </div>`;
+  }
+
+  const VitalTile = ({ label, value, unit, status, note, icon }) => `<div class="sx-tile ${status}">
+    <div class="metric-icon ${status}">${I(icon)}</div>
+    <div class="sx-tile-body"><span>${esc(label)}</span><strong>${esc(value)}<small>${esc(unit)}</small></strong><em>${esc(note)}</em></div>
+    ${StatusPill(status === 'danger' ? 'Alert' : status === 'warn' ? 'Monitor' : 'Normal', status)}</div>`;
+
+  const ORGAN_ORDER = ['heart', 'lungs', 'brain', 'msk', 'digestive', 'kidneys', 'rad'];
+  function pickShown(organs) {
+    const severe = ORGAN_ORDER.reduce((best, k) => (LEVEL_RANK[organs[k].level] > LEVEL_RANK[organs[best].level] ? k : best), 'heart');
+    return state.organ || severe;
+  }
+  function demoCtx() { const organs = organStates('demo'); return { organs, shown: pickShown(organs) }; }
+  function simCtx() { const s = ENGINE.crewSnapshot(state.crew, sim.hour); const organs = organStates('sim', s); return { s, organs, shown: pickShown(organs) }; }
+
+  const sideHtml = (c) => avatarCard(c.organs, c.shown);
+
+  /* ---- live vitals (placeholder feed) + alert panel ---- */
+
+  const liveTone = (l) => (l === 'ok' ? 'good' : l === 'watch' ? 'warn' : 'danger');
+
+  function liveAlertCard(a, mc) {
+    const key = 'live-' + a.id, done = mc && reviewed.has(key);
+    const notified = a.notified.map((p) => `${LIVE.NAMES[p.crew]} ${p.seen ? 'saw it' : 'waiting'}`).join(' · ');
+    return `<div class="card sx-livealert ${a.level === 'alert' ? 'critical' : 'warn'} ${done ? 'reviewed' : ''}">
+      <div class="sx-alert-head">${StatusPill(a.level === 'alert' ? 'Alert' : 'Attention', a.level === 'alert' ? 'danger' : 'warn')}<strong>${esc(LIVE.NAMES[a.crew])}: ${esc(a.title)}</strong><span class="ev ev-live">LIVE · placeholder feed</span><small>${esc(a.value)} · ${esc(a.category)}</small></div>
+      <span class="card-kicker">${mc ? 'WHAT THE ASTRONAUT WAS TOLD' : 'WHAT TO DO NOW'}</span>
+      <ol class="sx-steps">${a.steps.map((st) => `<li>${esc(st)}</li>`).join('')}</ol>
+      <div class="sx-alert-act"><div><span class="card-kicker">CREWMATES NOTIFIED</span><strong>${esc(notified)}</strong></div>
+        <div class="sx-btns">${mc
+          ? `<button class="btn secondary compact" data-act="review" data-key="${key}" type="button" ${done ? 'disabled' : ''}>${done ? 'Reviewed' : 'Mark reviewed'}</button>`
+          : `<button class="btn ${a.ack ? 'secondary' : 'primary'} compact" data-act="live-ack" data-id="${a.id}" type="button" ${a.ack ? 'disabled' : ''}>${a.ack ? 'Acknowledged' : 'I am doing this'}</button>`}</div></div>
+      <small class="ev-cite">${a.cite.length ? `Rule source: ${cite(a.cite)}` : 'Rule: this app\'s own band (see References)'}</small>
+    </div>`;
+  }
+
+  function feedHtml() {
+    const smp = LIVE.latest(state.crew);
+    if (!smp) return '';
+    const f = LIVE.rate(smp);
+    const active = LIVE.active(state.crew);
+    const notices = LIVE.notices(state.crew);
+    const tile = (label, value, unit, icon, r) => MetricCard({ label, value, unit, icon, status: liveTone(r.level), change: r.category });
+    return `<section class="sx-live" aria-label="Live vitals">
+        <div class="sx-live-head">
+          <div><span class="live-dot" aria-hidden="true"></span><span class="card-kicker">LIVE VITALS · ${esc(crewMember().name.toUpperCase())}</span></div>
+          <small>Placeholder datasheet · a new reading every ${Math.round(LIVE.intervalMs / 1000)} s · reading #${LIVE.count() + 1}</small>
+          <button class="btn secondary compact" data-act="skip-alert" type="button">Demo: jump to next alert</button>
+        </div>
+        <div class="sx-grid4">
+          ${tile('Heart rate', fmt0(smp.hr), ' bpm', 'heart', f.hr)}
+          ${tile('Blood pressure', `${fmt0(smp.sys)}/${fmt0(smp.dia)}`, ' mmHg', 'activity', f.bp)}
+          ${tile('Breathing', fmt1(smp.resp), ' /min', 'bolt', f.resp)}
+          ${tile('Temperature', fmt1(smp.temp), ' °C', 'thermometer', f.temp)}
+        </div>
+        ${active.map((a) => liveAlertCard(a, false)).join('')}
+        ${notices.map((n) => `<div class="sx-msg ${n.kind === 'resolved' ? 'is-ok' : ''}"><div>${I('send', 18)}</div><div><span class="card-kicker">CREW NOTICE · FROM ${esc(LIVE.NAMES[n.from].toUpperCase())} · PLACEHOLDER FEED</span><strong>${esc(n.text)}</strong></div><button class="btn primary compact" data-act="notice-ack" data-id="${n.id}" type="button">${I('check', 14)} Got it</button></div>`).join('')}
+        ${!active.length && !notices.length ? '<p class="sx-note sx-allclear">No live alerts. Your live vitals are in range, and your crewmates will be told if that changes.</p>' : ''}
+      </section>`;
+  }
+
+  // Demo Astronaut, below the live panel: organ detail and any suggestions from the latest check-in.
+  function demoBody(c) {
+    const acts = checkinActions(recentCheckin(state.crew));
+    return `${acts.length ? insight('is-message', 'spark', 'SUGGESTED ACTION · FROM YOUR CHECK-IN', acts.map(esc).join('<br>')) : ''}
+      ${organDetail(c.shown, c.organs, 'demo')}`;
+  }
+
+  // Apollo 15 Simulation: everything that depends on the replay clock.
+  function simBody(c) {
+    const { s, organs, shown } = c;
+    const [title, copy] = ENGINE.scoreCopy(s.score);
+    const alerts = activeNotices('astronaut');
+    const hr = ENGINE.series(state.crew, sim.hour, 48, 'heart_rate_bpm');
+    const tone = s.score >= 90 ? 'good' : s.score >= 75 ? '' : s.score >= 55 ? 'is-warn' : 'is-danger';
+    const surfaceSleep = AHM.eventsUpTo(ENGINE.DATA.events, sim.hour).filter((e) => e.category === 'sleep').pop();
+    const dose = s.modern.doseMrad;
+    const log = eventsSoFar('control').slice(-8).reverse();
+    return `<div class="card sx-status ${tone}">
+        <div class="score-ring" style="--ring-p:${s.score};${s.score < 90 ? '--ring-c:var(--orange)' : ''}"><div><strong>${s.score}</strong><span>/ 100</span></div></div>
+        <div class="sx-status-copy">
+          <span class="card-kicker">${esc(crewMember().name.toUpperCase())} · GET ${AHM.formatGet(sim.hour)}</span>
+          <h2>${title}</h2>
+          <p>${copy}</p>
+          ${StatusPill(alerts.length ? `${alerts.length} active notice${alerts.length > 1 ? 's' : ''}` : 'All systems nominal', alerts.length ? 'warn' : 'good')}
+          <small class="sx-note">The score is this app's own measure (replayed heart-rate and breathing bands plus active events, see engine.js), not a NASA score.</small>
+        </div>
+      </div>
+      <h3 class="sx-h3">Alerts at this moment <small>all crew</small></h3>
+      ${controlAlerts()}
+      <section class="sx-grid2">
+        ${VitalTile({ label: 'Radiation dose', value: fmt1(dose * 0.01), unit: ' mSv', icon: 'orbit', status: 'good', note: `Modeled · real total ${fmt0(s.modern.doseEndpointMrad)} mrad` })}
+        ${VitalTile({ label: 'Latest sleep period', value: surfaceSleep ? surfaceSleep.title.replace(/ lunar-surface sleep period/, ' surface sleep') : 'None yet', unit: '', icon: 'moon', status: surfaceSleep ? 'warn' : 'good', note: surfaceSleep ? 'Displaced · crew-reported' : 'Before lunar landing' })}
+      </section>
+      ${DecisionSupport(s)}
+      ${organDetail(shown, organs, 'sim', s)}
+      ${ChartCard({ kicker: 'HEART RATE', label: `${crewMember().name} · last 48 hours`, meta: `AVG ${fmt0(ENGINE.avg(hr))} BPM · shaded = moonwalk`, body: LineChart({ color: 'cyan', points: hr, eva: AHM.EVA_WINDOWS }) })}
+      <p class="sx-note">The averages NASA reported are ${cite(['apollo15_mr'], 'Section 10.1')}; the line between them is interpolated, and values with no report (for example Worden's heart rate) are estimated.</p>
+      <h3 class="sx-h3">All crew at this moment</h3>
+      <div class="card sx-board">${ENGINE.allCrewSnapshots(sim.hour).map((sn) => crewRowSim(sn, crewById(sn.crewId))).join('')}</div>
+      <h3 class="sx-h3">Mission log <small>${eventsSoFar('control').length} of ${ENGINE.DATA.events.length} events so far</small></h3>
+      <ul class="ev-list">${log.map((e) => EventItem(e, true)).join('') || '<li class="empty">Nothing yet. Press Simulate or drag the clock.</li>'}</ul>
+      ${ModernLayer(s)}
+      ${LimitsBlock()}`;
+  }
+
+  function ModernLayer(s) {
+    const m = s.modern;
+    return `<details class="sx-details" data-key="modern" ${state.open.modern ? 'open' : ''}>
+      <summary><span>Modern monitoring layer</span><span class="ev ev-sim">SIMULATED · not measured on Apollo 15</span></summary>
+      <p class="sx-note">Apollo's body sensors measured only heart rhythm (ECG) and breathing. Today's wearables add the signals below. These numbers are generated by this app to show what a current system would add.</p>
+      <section class="sx-grid4">
+        ${MetricCard({ label: 'Blood pressure (est.)', value: `${fmt0(m.systolicBp)}/${fmt0(m.systolicBp - 40)}`, unit: 'mmHg', icon: 'activity', status: 'good', change: 'Simulated' })}
+        ${MetricCard({ label: 'Oxygen saturation (est.)', value: fmt1(m.spo2), unit: '%', icon: 'spark', status: 'good', change: 'Simulated' })}
+        ${MetricCard({ label: 'Skin temperature (est.)', value: fmt1(m.skinTemp), unit: '°C', icon: 'thermometer', status: 'good', change: 'Simulated' })}
+        ${MetricCard({ label: 'Sleep quality (est.)', value: fmt0(m.sleepQuality), unit: '/100', icon: 'moon', status: m.sleepQuality >= 70 ? 'good' : 'warn', change: 'Simulated' })}
+      </section>
+    </details>`;
+  }
+
+  function LimitsBlock() {
+    const rows = [
+      ['Bone loss', `Apollo 15 has only before-and-after scans over 12 days ${citeText(['apollo15_mr'], 'Section 10.4')}. Long missions can lose more; see the gravity-fields hazard ${citeText(['hrp_hazards'])}.`],
+      ['Eye and brain pressure (SANS)', 'Builds over months on the ISS. A 12-day flight is far too short to show it.'],
+      ['Immune changes', 'Need weeks to months of exposure and lab work. Apollo 15 has no usable in-flight record.'],
+      ['Isolation and confinement', 'Effects grow with duration. A 12-day mission with a 1.3 s link barely tests them.'],
+    ];
+    return `<details class="sx-details" data-key="limits" ${state.open.limits ? 'open' : ''}>
+      <summary><span>What this 12-day replay cannot show</span></summary>
+      ${rows.map(([t, d]) => `<div class="sx-row"><strong>${t}</strong><span>${d}</span></div>`).join('')}
+    </details>`;
+  }
+
+  function checkinBlock() {
+    const rows = AHM.readDemoLog().filter((e) => e.type === 'checkin' && (!e.crewId || e.crewId === state.crew)).slice(-3).reverse();
+    const slider = (f, label) => `<div class="slider-row"><span>${label}</span><input type="range" min="1" max="5" value="3" data-f="${f}" aria-label="${label}"><span class="val">3</span></div>`;
+    return `<h3 class="sx-h3">Daily check-in <span class="ev ev-demo">DEMO</span></h3>
+      <p class="sx-note">Apollo crews did not fill in a daily survey; modern crews do. A check-in colours the body map for two hours and can add a suggested action.</p>
+      <div class="card composer">
+        ${slider('mood', 'Mood (1 low – 5 high)')}${slider('fatigue', 'Fatigue (1–5)')}
+        <div class="field"><span>Symptoms (optional)</span><textarea id="ci-sym" placeholder="e.g. palpitations, headache, nausea"></textarea></div>
+        <div class="field"><span>Dosimeter reading, mSv (optional)</span><input id="ci-dose" type="number" min="0" step="0.1"></div>
+        <button class="btn primary" id="ci-save" type="button">${I('check', 14)} Log check-in</button>
+      </div>
+      ${rows.length ? `<ul class="ev-list">${rows.map((e) => `<li class="ev-item"><div class="ev-time">${new Date(e.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div><div class="ev-main"><div class="ev-title"><strong>Mood ${e.mood}/5 · Fatigue ${e.fatigue}/5${e.dose != null ? ` · ${e.dose} mSv` : ''}</strong><span class="ev ev-demo">DEMO</span></div>${e.symptoms ? `<p>${esc(e.symptoms)}</p>` : ''}</div></li>`).join('')}</ul>` : ''}`;
+  }
+
+  function pageAstronaut() {
+    const c = demoCtx();
+    return `<section class="sx-head">
+        <div><div class="eyebrow">01 · DEMO ASTRONAUT</div><h1>Your health, <em>at a glance</em></h1>
+        <p>Live vitals come from a placeholder datasheet that updates every 3 seconds, standing in for real sensors. This page uses no Apollo 15 data; open <a href="#simulation">Apollo 15 Simulation</a> for the mission replay.</p></div>
+      </section>
+      <div class="sx-controls">${crewChips()}</div>
+      <div class="sx-split">
+        <aside class="sx-side" aria-label="Body map"><div id="side-body">${sideHtml(c)}</div></aside>
+        <div class="sx-main">
+          <div id="feed-body">${feedHtml()}</div>
+          <div id="live-body">${demoBody(c)}</div>
+        </div>
+      </div>
+      <section id="checkin-body">${checkinBlock()}</section>`;
+  }
+
+  function pageSimulation() {
+    const c = simCtx();
+    return `<section class="sx-head">
+        <div><div class="eyebrow">03 · APOLLO 15 SIMULATION · REAL 1971 RECORD</div><h1>Replay the <em>mission</em></h1>
+        <p>Press Simulate to replay Apollo 15's real biomedical record. Status, alerts, the body map and the log all follow the mission clock. The live demo feed is not used here.</p></div>
+      </section>
+      <div class="sx-controls">${crewChips()}${tplSimBar()}</div>
+      <div class="sx-split">
+        <aside class="sx-side" aria-label="Body map"><div id="side-body">${sideHtml(c)}</div></aside>
+        <div class="sx-main"><div id="live-body">${simBody(c)}</div></div>
+      </div>`;
+  }
+
   /* ------------------------------------------------------------------ *
-   * Reports & Settings (shared shape, astronaut/control)
+   * Page: Demo Mission Control (live placeholder feed only)
    * ------------------------------------------------------------------ */
 
-  function reportRows(control) {
-    const base = [
-      ['Comprehensive Health Summary', 'MED-HLTH-A15', 'Aug 07, 1971', 'Medical', 'Ready'],
-      [`Cardiovascular Assessment — ${control ? 'Irwin' : ENGINE.crewShortName(myCrewMember())}`, 'MED-CARD-A15', 'Aug 07, 1971', 'Health', 'Ready'],
-      ['Apollo 15 Mission Report (MSC-07230)', 'NASA-MSC-07230', 'Sep 1971', 'Mission', 'Ready'],
-      ['Radiation Exposure Record (M-078)', 'MED-RAD-A15', 'Aug 1971', 'Safety', 'Archived'],
-      ['Postflight Physical Exam Summary', 'MED-WELL-A15', 'Aug 07, 1971', 'Medical', 'Ready'],
-    ];
-    return base;
-  }
-
-  function ReportsPage(control) {
-    const all = reportRows(control);
-    const cats = ['All', ...new Set(all.map((r) => r[3]))];
-    const cat = cats.includes(reportCat) ? reportCat : 'All';
-    const rows = all.filter((r) => cat === 'All' || r[3] === cat);
-    const stats = [
-      [control ? 'Crew Reports' : 'Health Reports', '5', 'report'],
-      ['Mission Reports', ENGINE.DATA.events.length.toString(), 'orbit'],
-      [control ? 'Performance Reports' : 'PDF Reports', '3', 'activity'],
-      ['Cited Sources', '5+', 'download'],
-    ];
-    const cols = 'grid-template-columns:2.2fr 1fr 1fr .9fr .8fr 30px;';
-    return `<section class="report-stats">${stats.map(([label, value, icon]) => `<div class="card report-stat"><div class="metric-icon good">${I(icon)}</div><div><span>${esc(label)}</span><strong>${esc(value)}</strong><small>FILES</small></div></div>`).join('')}</section>
-      <div class="card reports-table">
-        <div class="table-toolbar"><div><span class="card-kicker">DOCUMENT CENTER</span><strong>${control ? 'Mission & Crew Reports' : 'Health & Mission Reports'}</strong></div><div>
-          <select class="select-ctl" data-change="report-cat" aria-label="Filter reports by category">${cats.map((c) => `<option value="${esc(c)}"${c === cat ? ' selected' : ''}>${c === 'All' ? 'All categories' : esc(c)}</option>`).join('')}</select>
-          <button class="btn primary compact" data-act="export-csv" type="button">${I('download')} Export summary</button></div></div>
-        <div class="table-scroll"><div class="data-table">
-          <div class="table-row table-head cols-4" style="${cols}"><span>REPORT NAME</span><span>REFERENCE</span><span>DATE</span><span>CATEGORY</span><span>STATUS</span><span></span></div>
-          ${rows.map((row) => `<div class="table-row" style="${cols}"><span class="report-name">${I('report')}<div><strong>${esc(row[0])}</strong></div></span><span>${esc(row[1])}</span><span>${esc(row[2])}</span><span>${esc(row[3])}</span><span>${StatusPill(row[4], row[4] === 'Archived' ? 'info' : 'good')}</span><button class="btn download-btn" data-act="dl-report" data-ref="${esc(row[1])}" title="Download summary" aria-label="Download summary of ${esc(row[0])}" type="button">${I('download')}</button></div>`).join('') || '<div class="empty">No reports in this category.</div>'}
-        </div></div>
-      </div>
-      <div class="data-note">Dates and references reflect the real Apollo 15 mission report and its 1971 documentation, standing in for the modern report set this dashboard is designed around.</div>`;
-  }
-
-  function exportReportsCsv() {
-    const control = current.role === 'control';
-    const rows = reportRows(control).filter((r) => reportCat === 'All' || r[3] === reportCat);
-    const q = (v) => `"${String(v).replace(/"/g, '""')}"`;
-    const csv = [['Report name', 'Reference', 'Date', 'Category', 'Status'], ...rows].map((r) => r.map(q).join(',')).join('\n');
-    downloadFile('apollo15-report-summary.csv', csv, 'text/csv');
-    toast(`Exported ${rows.length} report${rows.length === 1 ? '' : 's'} to CSV`);
-  }
-
-  function downloadReport(ref) {
-    const row = reportRows(current.role === 'control').find((r) => r[1] === ref);
-    if (!row) return;
-    const txt = `${row[0]}\nReference: ${row[1]}\nDate: ${row[2]}\nCategory: ${row[3]}\nStatus: ${row[4]}\n\nSummary card generated by the Astronomican Apollo 15 replay.\nThe full source documents are cited in README.md (Primary data sources).\n`;
-    downloadFile(`${ref}.txt`, txt, 'text/plain');
-    toast(`Downloaded ${ref}`);
-  }
-
-  function SettingsPage(control) {
-    const groups = control
-      ? [['Operator Profile', 'Flight Director • Houston Control', 'user'], ['Notification Settings', 'Critical and mission alerts', 'alert'], ['Access Control', 'Level 4 mission clearance', 'shield'], ['Security', 'Multi-factor authentication', 'shield'], ['System Preferences', 'UTC • GET convention', 'settings'], ['Dashboard Customization', 'Mission operations layout', 'activity']]
-      : [['Profile Information', `${myCrewMember().name} • ${myCrewMember().role}`, 'user'], ['Account Settings', 'Mission credential management', 'settings'], ['Notification Preferences', 'Health and mission alerts', 'alert'], ['Security Settings', 'Biometric authentication enabled', 'shield'], ['Appearance Settings', 'Dark interface • High contrast', 'spark'], ['Replay Settings', `Rate: ${sim.speed} GET-hours / second`, 'activity']];
-    return `<div class="settings-profile card">
-        <div class="large-avatar">${I('user', 34)}</div>
-        <div><span class="card-kicker">${control ? 'OPERATOR PROFILE' : 'CREW PROFILE'}</span><strong>${control ? 'Flight Director' : esc(myCrewMember().name)}</strong><p>${control ? 'Flight Director • Houston Control' : `${myCrewMember().role} • Apollo 15`}</p></div>
-        ${StatusPill('Identity verified', 'good')}
-        <button class="btn secondary" data-act="edit-profile" type="button">Edit profile</button>
-      </div>
-      <section class="settings-grid">${groups.map(([title, copy, icon], i) => `<div class="card setting-card"><div class="setting-icon">${I(icon)}</div><div><strong>${esc(title)}</strong><span>${esc(copy)}</span></div>${(() => { const key = `${control ? 'c' : 'a'}:${title}`; const on = key in toggles ? toggles[key] : i !== 4; return `<button class="toggle ${on ? 'active' : ''}" data-act="toggle" data-key="${esc(key)}" role="switch" aria-checked="${on}" aria-label="${esc(title)}" type="button"><span></span></button>`; })()}</div>`).join('')}</section>
-      <div class="card system-panel"><div><span class="card-kicker">SYSTEM INFORMATION</span><strong>Astronomican Health Network</strong><p>Version 4.2.1 • Apollo 15 dataset build • ${ENGINE.DATA.events.length} cited events loaded</p></div>${StatusPill('All systems operational', 'good')}</div>`;
-  }
-
-  function AstronautPage(page) {
-    if (page === 'dashboard') return AstronautDashboard();
-    if (page === 'check-in') return CheckinPage();
-    if (page === 'reports') return ReportsPage(false);
-    if (page === 'settings') return SettingsPage(false);
-    if (page === 'alerts') return AlertsPage('astronaut');
-    return MetricDetailPage(ASTRO_DETAIL[page] ? page : 'health-status');
-  }
-
-  /* ------------------------------------------------------------------ *
-   * Mission Control pages
-   * ------------------------------------------------------------------ */
-
-  function CrewRow(s, c) {
-    return `<div class="crew-row">
+  // Apollo replay row: replay numbers only.
+  function crewRowSim(s, c) {
+    const level = LEVEL[s.assess.overall] || 'ok';
+    return `<div class="sx-crew">
       <div class="crew-avatar">${c.photo_initials}</div>
-      <div class="crew-name"><strong>${esc(c.name)}</strong><span>${esc(c.role)}</span></div>
-      <div class="crew-reading"><small>HEALTH</small><strong>${s.score}</strong></div>
-      <div class="crew-reading"><small>HEART RATE</small><strong>${fmt0(s.assess.row.heart_rate_bpm)}<span> bpm</span></strong></div>
-      <div class="crew-reading"><small>OXYGEN</small><strong>${fmt1(s.modern.spo2)}%</strong></div>
-      <div class="crew-reading"><small>RADIATION</small><strong>${fmt1(s.modern.doseMrad * 0.01)}<span> mSv</span></strong></div>
-      ${StatusPill(s.assess.overall === 'NOMINAL' ? 'Nominal' : s.assess.overall === 'ATTENTION' ? 'Review' : 'Critical', s.assess.overall === 'NOMINAL' ? 'good' : s.assess.overall === 'ATTENTION' ? 'warn' : 'danger')}
+      <div class="sx-crew-name"><strong>${esc(c.name)}</strong><span>${esc(c.role)}</span></div>
+      ${StatusPill(overallWord(s.assess.overall), LEVEL_TONE[level])}
+      <div class="sx-crew-num"><small>HEART RATE</small><strong>${fmt0(s.assess.row.heart_rate_bpm)}<span> bpm</span></strong></div>
+      <div class="sx-crew-num"><small>BREATHING</small><strong>${fmt1(s.assess.row.respiration_rate)}<span> /min</span></strong></div>
+      <div class="sx-crew-num"><small>SCORE</small><strong>${s.score}</strong></div>
+      <button class="btn secondary compact" data-act="crew" data-val="${c.id}" type="button">Show</button>
     </div>`;
   }
 
-  function ControlDashboard() {
-    const snaps = ENGINE.allCrewSnapshots(sim.hour);
-    const avgScore = Math.round(snaps.reduce((s, x) => s + x.score, 0) / snaps.length);
-    const critical = activeNotices('control');
-    const feed = ENGINE.recentEvents(sim.hour, 4);
-    const mciSeries = ENGINE.series('LMP', sim.hour, 48, 'heart_rate_bpm');
-    return `<section class="metric-grid four control-kpis">
-        ${MetricCard({ label: 'Active Crew', value: '03', unit: 'TRANSMITTING', icon: 'crew', status: 'good', change: 'All telemetry current' })}
-        ${MetricCard({ label: 'Mission Progress', value: `${Math.round(sim.hour / TOTAL_HOURS * 100)}%`, unit: `DAY ${ENGINE.missionDay(sim.hour)}`, icon: 'orbit', status: 'good', change: `GET ${AHM.formatGet(sim.hour)}` })}
-        ${MetricCard({ label: 'Open Notices', value: String(critical.length).padStart(2, '0'), unit: 'ACTIVE', icon: 'alert', status: critical.length ? 'warn' : 'good', change: critical.length ? `${critical.length} require review` : 'None active' })}
-        ${MetricCard({ label: 'Average Health Score', value: fmt1(avgScore), unit: '/ 100', icon: 'heart', status: 'good', change: 'Across all crew' })}
-      </section>
-      <section class="control-main-grid">
-        <div class="card crew-overview">
-          <div class="card-head"><div><span class="card-kicker">LIVE CREW FEED</span><strong>Crew Overview</strong></div>${StatusPill('3 online', 'good')}</div>
-          <div class="crew-list">${snaps.map((s) => CrewRow(s, ENGINE.CREW.find((c) => c.id === s.crewId))).join('')}</div>
-        </div>
-        ${ChartCard({ label: 'Mission Health Index', meta: `AVG ${avgScore}`, body: LineChart({ color: 'teal', points: mciSeries, eva: AHM.EVA_WINDOWS }) })}
-        <div class="card activity-feed">
-          <div class="card-head"><div><span class="card-kicker">MISSION LOG</span><strong>Recent Activity</strong></div></div>
-          ${feed.map((e) => `<div class="feed-item"><span class="feed-marker ${e.severity ? 'danger' : ''}"></span><small>GET ${AHM.formatGet(e.get_hours)}</small><div><strong>${esc(e.title)}</strong><span>${esc(e.crew_id ? ENGINE.CREW.find((c) => c.id === e.crew_id).name : 'Flight systems')}</span></div></div>`).join('') || '<div class="empty">Mission log will populate as GET advances.</div>'}
-        </div>
-      </section>`;
-  }
-
-  function CrewMonitoring() {
-    const snaps = ENGINE.allCrewSnapshots(sim.hour);
-    if (crewSort === 'score') snaps.sort((a, b) => a.score - b.score);
-    return `<div class="crew-filter"><div>${StatusPill('3 connected', 'good')}<span>All crew telemetry current at GET ${AHM.formatGet(sim.hour)}</span></div><div><button class="btn filter-btn ${crewSort === 'default' ? 'active' : ''}" data-act="crew-sort" data-val="default" type="button">Mission order</button><button class="btn filter-btn ${crewSort === 'score' ? 'active' : ''}" data-act="crew-sort" data-val="score" title="Show the lowest health score first" type="button">Lowest score first</button></div></div>
-      <section class="crew-card-grid">
-        ${snaps.map((s) => {
-          const c = ENGINE.CREW.find((x) => x.id === s.crewId);
-          const tone = s.assess.overall === 'NOMINAL' ? 'good' : s.assess.overall === 'ATTENTION' ? 'warn' : 'danger';
-          return `<div class="card crew-card ${s.assess.overall !== 'NOMINAL' ? 'is-selected' : ''}">
-            <div class="crew-card-head"><div class="crew-avatar">${c.photo_initials}</div><div><strong>${esc(c.name)}</strong><span>${esc(c.role)}</span></div>${StatusPill(s.assess.overall === 'NOMINAL' ? 'Nominal' : s.assess.overall === 'ATTENTION' ? 'Review' : 'Critical', tone)}</div>
-            <div class="crew-score"><div><span>HEALTH SCORE</span><strong>${s.score}</strong><small>/ 100</small></div><div class="mini-ring" style="--ring-p:${s.score};${s.score < 90 ? '--ring-c:var(--orange)' : ''}"><span>${s.score}%</span></div></div>
-            <div class="crew-vitals">
-              <div>${I('heart')}<small>HEART RATE</small><strong>${fmt0(s.assess.row.heart_rate_bpm)}<span> BPM</span></strong></div>
-              <div>${I('spark')}<small>OXYGEN</small><strong>${fmt1(s.modern.spo2)}%</strong></div>
-              <div>${I('orbit')}<small>RADIATION</small><strong>${fmt1(s.modern.doseMrad * 0.01)}<span> mSv</span></strong></div>
-            </div>
-            <button class="btn secondary full" data-act="view-profile" data-crew="${c.id}" type="button">View health profile ${I('arrow')}</button>
-          </div>`;
-        }).join('')}
-      </section>
-      <div class="card comparison-card">
-        <div class="card-head"><div><span class="card-kicker">CREW COMPARISON</span><strong>Health Score Overview</strong></div><span class="chart-meta">GET ${AHM.formatGet(sim.hour)}</span></div>
-        ${snaps.map((s) => `<div class="comparison-row"><span>${esc(ENGINE.crewShortName(ENGINE.CREW.find((c) => c.id === s.crewId)))}</span><div class="progress cyan"><span style="width:${s.score}%"></span></div><strong>${s.score}</strong></div>`).join('')}
-      </div>`;
-  }
-
-  function avgSeries(field) {
-    const ss = ENGINE.CREW.map((c) => ENGINE.series(c.id, sim.hour, 72, field));
-    return ss[0].map((p, i) => ({ x: p.x, y: ss.reduce((sum, a) => sum + (a[i] ? a[i].y : p.y), 0) / ss.length }));
-  }
-
-  function HealthAnalytics() {
-    const crew = ENGINE.CREW.find((c) => c.id === analyticsCrew) || null;          // null = all crew
-    const nm = (id) => ENGINE.crewShortName(ENGINE.CREW.find((c) => c.id === id));
-    const doseAt = (h) => { const ids = crew ? [crew.id] : ENGINE.CREW.map((c) => c.id); return ids.reduce((sum, id) => sum + AHM.simulateModernVitals(id, h, ENGINE.DATA.events).doseMrad, 0) / ids.length * 0.01; };
-    const rows = crew ? [
-      { label: `Heart rate — ${nm(crew.id)} (${crew.id})`, color: 'cyan', field: 'heart_rate_bpm', id: crew.id },
-      { label: `Respiration — ${nm(crew.id)} (${crew.id})`, color: 'violet', field: 'respiration_rate', id: crew.id },
-      { label: 'Radiation dose accumulation', color: 'orange', field: null },
-    ] : [
-      { label: 'Crew heart-rate trend (average)', color: 'cyan', field: 'heart_rate_bpm', avg: true },
-      { label: 'Cardiovascular — Irwin (LMP)', color: 'teal', field: 'heart_rate_bpm', id: 'LMP' },
-      { label: 'Respiration — Worden (CMP)', color: 'violet', field: 'respiration_rate', id: 'CMP' },
-      { label: 'Radiation dose accumulation (crew average)', color: 'orange', field: null },
-      { label: 'Sleep-period respiration — Irwin', color: 'cyan', field: 'respiration_rate', id: 'LMP' },
-    ];
-    const filters = [['all', 'All crew'], ...ENGINE.CREW.map((c) => [c.id, ENGINE.crewShortName(c)])];
-    return `<div class="analytics-toolbar"><div>${filters.map(([id, name]) => `<button class="btn filter-btn ${analyticsCrew === id || (!crew && id === 'all') ? 'active' : ''}" data-act="analytics-crew" data-val="${id}" type="button">${esc(name)}</button>`).join('')}</div>${StatusPill('Replay engine live', 'good')}</div>
-      <section class="analytics-grid">
-        ${rows.map((row, i) => {
-          let body, meta;
-          if (row.field) {
-            const pts = row.avg ? avgSeries(row.field) : ENGINE.series(row.id, sim.hour, 72, row.field);
-            body = LineChart({ color: row.color, points: pts, eva: AHM.EVA_WINDOWS });
-            meta = `${fmt1(ENGINE.avg(pts))} AVG`;
-          } else {
-            body = LineChart({ color: row.color, points: Array.from({ length: 20 }, (_, k) => ({ x: k, y: doseAt(sim.hour * k / 19) })) });
-            meta = `${fmt1(doseAt(sim.hour))} mSv EST`;
-          }
-          return `<div class="analytics-chart ${i === 0 ? 'wide' : ''}">${ChartCard({ label: row.label, meta, body })}</div>`;
-        }).join('')}
-      </section>`;
-  }
-
-  function MissionStatus() {
-    const legs = [
-      ['Launch', 'Jul 26, 1971', 0], ['Lunar landing', 'Jul 30, 1971', 104.708], ['EVA-3 complete', 'Aug 02, 1971', 168.134], ['Current position', AHM.formatGetLong(sim.hour), sim.hour], ['Splashdown', 'Aug 07, 1971', TOTAL_HOURS],
-    ];
-    return `<section class="mission-overview"><div class="card mission-orbit-card">
-        <div class="planet-large"><div class="planet-glow"></div><div class="trajectory"></div><div class="spacecraft"></div></div>
-        <div class="orbit-copy"><span class="card-kicker">APOLLO 15 • ${sim.hour < 104.7 ? 'TRANSLUNAR COAST' : sim.hour < 240 ? 'LUNAR SURFACE / ORBIT' : 'TRANSEARTH COAST'}</span><strong>Mission progressing on the real 1971 timeline</strong><p>Replaying flight systems, crew health indicators and Mission Control's actual decisions from launch through splashdown.</p>${StatusPill(sim.hour >= TOTAL_HOURS ? 'Mission complete' : 'Mission nominal', 'good')}</div>
-        <div class="day-counter"><span>MISSION DAY</span><strong>${ENGINE.missionDay(sim.hour)}</strong><small>OF ${ENGINE.missionTotalDays()}</small></div>
-      </div></section>
-      <section class="environment-grid">
-        ${MetricCard({ label: 'Cabin Atmosphere', value: '5.0', unit: 'PSIA', icon: 'orbit', status: 'good', change: '100% O₂ (1971 hardware)' })}
-        ${MetricCard({ label: 'GET Elapsed', value: AHM.formatGet(sim.hour), unit: 'H:MM', icon: 'activity', status: 'good', change: `${Math.round(sim.hour / TOTAL_HOURS * 100)}% complete` })}
-        ${MetricCard({ label: 'EVA Surface Time', value: fmt1(AHM.EVA_WINDOWS.slice(1, 4).filter((w) => w.start <= sim.hour).reduce((s, w) => s + (Math.min(w.end, sim.hour) - w.start), 0)), unit: 'HOURS', icon: 'thermometer', status: 'good', change: '3 EVAs total' })}
-        ${MetricCard({ label: 'Rover Distance', value: sim.hour >= 168.134 ? '27.9' : sim.hour >= 119.655 ? '~15' : '0', unit: 'KM', icon: 'spark', status: 'good', change: 'First crewed lunar rover' })}
-      </section>
-      <div class="card mission-timeline">
-        <div class="card-head"><div><span class="card-kicker">MISSION TIMELINE</span><strong>Apollo 15 Flight Plan</strong></div><span class="chart-meta">${Math.round(sim.hour / TOTAL_HOURS * 100)}% COMPLETE</span></div>
-        <div class="flight-line">${legs.map(([title, date, h]) => `<div class="${h <= sim.hour ? (title === 'Current position' ? 'now' : 'done') : ''}"><span></span><strong>${esc(title)}</strong><small>${esc(date)}</small></div>`).join('')}</div>
-      </div>`;
+  // Demo row: live placeholder numbers only.
+  function crewRowLive(c) {
+    const smp = LIVE.latest(c.id), live = LIVE.active(c.id);
+    const level = live.length ? live[0].level : 'ok';
+    const word = level === 'alert' ? 'Alert' : level === 'watch' ? 'Attention' : 'In range';
+    return `<div class="sx-crew">
+      <div class="crew-avatar">${c.photo_initials}</div>
+      <div class="sx-crew-name"><strong>${esc(c.name)}</strong><span>${esc(c.role)}</span></div>
+      ${StatusPill(word, LEVEL_TONE[level])}
+      <div class="sx-crew-num"><small>HEART RATE</small><strong>${smp ? fmt0(smp.hr) : '-'}<span> bpm</span></strong></div>
+      <div class="sx-crew-num"><small>BLOOD PRESSURE</small><strong>${smp ? fmt0(smp.sys) + '/' + fmt0(smp.dia) : '-'}</strong></div>
+      <div class="sx-crew-num"><small>BREATHING</small><strong>${smp ? fmt1(smp.resp) : '-'}<span> /min</span></strong></div>
+      <div class="sx-crew-num"><small>TEMPERATURE</small><strong>${smp ? fmt1(smp.temp) : '-'}<span> °C</span></strong></div>
+      <button class="btn secondary compact" data-act="open-crew" data-val="${c.id}" type="button">Astronaut view</button>
+    </div>`;
   }
 
   const alertKey = (e) => String(e.get_hours);
 
-  function AlertsPage(role) {
-    const all = visibleEvents(role).filter((e) => e.severity && e.get_hours <= sim.hour);
-    const counts = { CRITICAL: 0, ATTENTION: 0, INFO: 0 };
-    all.forEach((e) => { counts[e.severity] = (counts[e.severity] || 0) + 1; });
-    const items = all.filter((e) => alertFilter === 'all' || e.severity === alertFilter).slice(-10).reverse();
-    const toneOf = (sev) => sev === 'CRITICAL' ? 'danger' : sev === 'ATTENTION' ? 'warn' : 'info';
-    const fbtn = (val, label, n) => `<button class="btn filter-btn ${alertFilter === val ? 'active' : ''}" data-act="alert-filter" data-val="${val}" type="button">${label} <span>${n}</span></button>`;
-    const isDone = (e) => reviewed.has(alertKey(e)) || e.get_hours < sim.hour - 24;
-    return `<div class="alert-filters"><div>
-        ${fbtn('all', 'All alerts', all.length)}${fbtn('CRITICAL', 'Critical', counts.CRITICAL || 0)}${fbtn('ATTENTION', 'Warnings', counts.ATTENTION || 0)}${fbtn('INFO', 'Information', counts.INFO || 0)}
-      </div><button class="btn secondary" data-act="alert-review-all" type="button">${I('check')} Mark all reviewed</button></div>
-      <div class="card alert-management"><div class="alert-timeline-line"></div>
-        ${items.map((e) => `<div class="management-alert ${toneOf(e.severity)} ${isDone(e) ? 'reviewed' : ''}"><div class="alert-priority">${I(e.severity === 'INFO' ? 'spark' : 'alert')}</div><div class="alert-content">${StatusPill(e.severity === 'CRITICAL' ? 'Critical' : e.severity === 'ATTENTION' ? 'Warning' : 'Information', toneOf(e.severity))}<strong>${esc(e.title)}</strong><span>${esc(e.crew_id ? ENGINE.CREW.find((c) => c.id === e.crew_id).name + ' • ' : '')}${esc(e.detail)}</span></div><small>GET ${AHM.formatGet(e.get_hours)}</small>${isDone(e) ? `<button class="btn secondary compact" disabled type="button">${I('check', 13)} Reviewed</button>` : `<button class="btn secondary compact" data-act="alert-review" data-key="${alertKey(e)}" type="button">Review</button>`}</div>`).join('') || `<div class="empty">${all.length ? 'No alerts match this filter.' : `No alerts raised yet — GET ${AHM.formatGet(sim.hour)}.`}</div>`}
+  // Apollo 15 replay alerts for all crew, with the recommend / acknowledge exchange (demo messages).
+  function controlAlerts() {
+    const items = activeNotices('control');
+    if (!items.length) return '<div class="empty">No alerts at this mission time. Jump to GET 178:00 to see the real heart-rhythm event.</div>';
+    return items.map((e) => {
+      const c = e.crew_id ? crewById(e.crew_id) : null;
+      const snap = c ? ENGINE.crewSnapshot(c.id, sim.hour) : null;
+      const rec = (snap && ENGINE.advise(snap, null)[0]) || 'Repeat the vitals check, limit exertion and report any symptoms.';
+      const sent = c ? AHM.readDemoLog().find((m) => m.type === 'message' && m.alertKey === alertKey(e) && m.crewId === c.id) : null;
+      const done = reviewed.has(alertKey(e));
+      let sentHtml = '';
+      if (c && !sent) sentHtml = `<button class="btn primary compact" data-act="send-rec" data-key="${alertKey(e)}" data-crew="${c.id}" type="button">${I('send', 14)} Send to ${esc(ENGINE.crewShortName(c))}</button>`;
+      else if (sent && !sent.acknowledged) sentHtml = `<span class="pill info"><span></span>Sent (demo) · waiting</span><button class="btn primary compact" data-act="ack" data-id="${esc(sent.id)}" data-crew="${c.id}" type="button">${I('check', 14)} Acknowledge as ${esc(ENGINE.crewShortName(c))}</button>`;
+      else if (sent) sentHtml = '<span class="pill good"><span></span>Acknowledged (demo)</span>';
+      return `<div class="card sx-alert ${e.severity === 'CRITICAL' ? 'critical' : 'warn'} ${done ? 'reviewed' : ''}">
+        <div class="sx-alert-head">${StatusPill(e.severity === 'CRITICAL' ? 'Critical' : 'Warning', e.severity === 'CRITICAL' ? 'danger' : 'warn')}<strong>${esc(e.title)}</strong>${evidenceBadge(e)}<small>GET ${AHM.formatGet(e.get_hours)}</small></div>
+        <p>${esc(e.detail)}</p>
+        <small class="ev-cite">Source: ${e.refs && e.refs.length ? cite(e.refs, e.where) : 'estimated'}</small>
+        <div class="sx-alert-act"><div><span class="card-kicker">RECOMMENDED ACTION</span><strong>${esc(rec)}</strong></div>
+          <div class="sx-btns">${sentHtml}
+            <button class="btn secondary compact" data-act="review" data-key="${alertKey(e)}" type="button" ${done ? 'disabled' : ''}>${done ? 'Reviewed' : 'Mark reviewed'}</button>
+          </div></div>
       </div>`;
+    }).join('');
   }
 
-  function ControlPage(page) {
-    if (page === 'dashboard') return ControlDashboard();
-    if (page === 'crew-monitoring') return CrewMonitoring();
-    if (page === 'health-analytics') return HealthAnalytics();
-    if (page === 'mission-status') return MissionStatus();
-    if (page === 'alerts') return AlertsPage('control');
-    if (page === 'reports') return ReportsPage(true);
-    return SettingsPage(true);
+  function controlLive() {
+    const liveAll = LIVE.allActive();
+    const stamp = (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    return `<h3 class="sx-h3">Crew status <small>placeholder live feed</small></h3>
+      <div class="card sx-board">${ENGINE.CREW.map((c) => crewRowLive(c)).join('')}</div>
+      <h3 class="sx-h3">Live alerts</h3>
+      ${liveAll.length ? liveAll.map((a) => liveAlertCard(a, true)).join('') : '<div class="empty">No live alerts. Open Demo Astronaut and press "Demo: jump to next alert" to see one.</div>'}
+      <h3 class="sx-h3">Live heart rate by crew <small>last 30 readings, one every ${Math.round(LIVE.intervalMs / 1000)} s</small></h3>
+      <section class="sx-grid3">${ENGINE.CREW.map((c) => {
+        const pts = LIVE.history(c.id).map((r, i) => ({ x: i, y: r.hr }));
+        const latest = LIVE.latest(c.id);
+        return ChartCard({ kicker: ENGINE.crewShortName(c).toUpperCase(), label: c.role, meta: latest ? `NOW ${fmt0(latest.hr)} BPM` : '', body: LineChart({ color: c.id === 'LMP' ? 'orange' : c.id === 'CMP' ? 'violet' : 'cyan', points: pts }) });
+      }).join('')}</section>
+      <h3 class="sx-h3">Live alert log</h3>
+      <ul class="ev-list">${LIVE.log().map((l) => `<li class="ev-item ${l.level === 'alert' ? 'critical' : l.level === 'watch' ? 'warn' : ''}"><div class="ev-time">${stamp(l.ts)}</div><div class="ev-main"><div class="ev-title"><strong>${esc(l.text)}</strong><span class="ev ev-live">LIVE · placeholder feed</span></div></div></li>`).join('') || '<li class="empty">No alerts yet. The placeholder datasheet raises one within about two minutes.</li>'}</ul>`;
   }
 
-  function pageRouter(role, page) {
-    return role === 'astronaut' ? AstronautPage(page) : ControlPage(page);
+  function pageControl() {
+    return `<section class="sx-head">
+        <div><div class="eyebrow">02 · DEMO MISSION CONTROL</div><h1>The whole crew, <em>one screen</em></h1>
+        <p>Flight surgeons see all three astronauts' live vitals, the alerts that opened and what each astronaut was told. The numbers are a placeholder datasheet; the Apollo 15 mission lives on <a href="#simulation">Apollo 15 Simulation</a>.</p></div>
+      </section>
+      <div id="live-body">${controlLive()}</div>`;
   }
 
   /* ------------------------------------------------------------------ *
-   * Render + event wiring
+   * Page: Project (detailed description)
+   * ------------------------------------------------------------------ */
+
+  function pageProject() {
+    const ev = ENGINE.DATA.events.length;
+    const step = (n, t, d) => `<div class="card sx-step"><span class="sx-num">${n}</span><strong>${t}</strong><p>${d}</p></div>`;
+    const kind = (cls, name, d) => `<div class="sx-row"><span class="ev ${cls}">${name}</span><span>${d}</span></div>`;
+    const tr = (a, b, c) => `<tr><td><strong>${a}</strong></td><td>${b}</td><td>${c}</td></tr>`;
+    return `<section class="sx-head"><div><div class="eyebrow">04 · NASA SPACE APPS CHALLENGE 2026</div>
+        <h1>Project <em>description</em></h1>
+        <p>Astronomican is a health-monitoring prototype for astronauts and the flight surgeons who support them. It explains what it sees, suggests what to do, and shows where every number comes from.</p></div></section>
+
+      <section class="sx-block"><h2><span class="sx-sn">01</span>The challenge</h2>
+        <p>Long missions expose astronauts to the five hazards NASA's Human Research Program has mapped: space radiation, isolation and confinement, distance from Earth, gravity fields, and hostile closed environments ${cite(['hrp_hazards'])}. These can bring immune changes, bone loss, cardiovascular events and behavioural-health problems. On long missions astronauts carry much of the responsibility for spotting such changes in themselves, so the brief asks for software that gathers health indicators and helps the astronaut evaluate and act on them ${cite(['challenge2026'])}.</p></section>
+
+      <section class="sx-block"><h2><span class="sx-sn">02</span>Our approach in one line</h2>
+        <p><strong>Monitor, detect, explain, act, record</strong>, using a real mission as the test case instead of an invented scenario.</p>
+        <div class="sx-grid5">
+          ${step(1, 'Monitor', 'Gather the indicators a crew has: heart rate, breathing, sleep, dose, and a daily self-report.')}
+          ${step(2, 'Detect', 'Flag a change using events and bands, not only a number crossing a line.')}
+          ${step(3, 'Explain', 'Say in plain words what was seen, which hazard it relates to, and where the information comes from.')}
+          ${step(4, 'Act', 'Suggest an onboard action; Mission Control can send a recommendation that the crew acknowledges.')}
+          ${step(5, 'Record', 'Keep a cited timeline, with demo entries kept apart from the historical record.')}
+        </div></section>
+
+      <section class="sx-block"><h2><span class="sx-sn">03</span>Why Apollo 15</h2>
+        <p>Apollo 15 was a 12.3-day mission with a three-person crew ${cite(['apollo15_mr'], 'Section 10')}. Its medical record is public, so every figure in this replay can be traced to a document. The prototype loads ${ev} dated events: moonwalks, sleep, medication, radiation and post-flight findings.</p>
+        <p>The most useful event is one the official medical summary does not describe: after the Lunar Module lifted off the Moon, flight surgeons saw an abnormal rhythm on Lunar Module Pilot James Irwin's ECG ${cite(['sp368', 'wiki_return15'])}. The worry was the <em>rhythm</em> (paired beats with pauses), not a high heart rate. A monitor that only checks a rate threshold would not have described it. That is why status here is driven by documented events and context, such as moonwalk exertion being expected, rather than by rate alone.</p>
+        <p>The sources for this one event are mostly secondary (see the badge on the event), so it is labelled and listed under "still to verify" on the <a href="#references">References</a> page.</p></section>
+
+      <section class="sx-block"><h2><span class="sx-sn">04</span>What you can do in the app</h2>
+        <p>The demo and the Apollo 15 data are kept on separate pages, so you always know which one you are looking at.</p>
+        <div class="sx-row"><strong>Demo Astronaut</strong><span>Live vitals (heart rate, blood pressure, breathing, temperature) from a placeholder datasheet that updates every 3 seconds, a body map that turns yellow or red, step-by-step alerts, notices from crewmates and a daily check-in. No Apollo data is used here.</span></div>
+        <div class="sx-row"><strong>Demo Mission Control</strong><span>All three astronauts on one board with live numbers, the live alerts with what each astronaut was told and who has been notified, live heart-rate charts and an alert log.</span></div>
+        <div class="sx-row"><strong>Apollo 15 Simulation</strong><span>Press Simulate to replay the real 1971 record at 8 mission hours per second, drag the slider, or jump to any of the ${ev} cited events. Status score, body map, alerts with a send-and-acknowledge exchange, charts and the mission log all follow the mission clock.</span></div>
+        <div class="sx-row"><strong>Sources everywhere</strong><span>Every Apollo event shows an in-text APA citation. Click it to open the References page.</span></div></section>
+
+      <section class="sx-block"><h2><span class="sx-sn">05</span>How each hazard is handled</h2>
+        <div class="table-scroll"><table class="sx-table"><thead><tr><th>NASA hazard</th><th>What the app does</th><th>Where</th></tr></thead><tbody>
+          ${tr('Space radiation', 'Shows accumulated dose as a modeled curve ending at the real totals (360 and 510 mrad); the check-in accepts a dosimeter reading.', 'Simulation: dose tile')}
+          ${tr('Isolation and confinement', 'Uses the real sleep disruptions and a mood and fatigue self-report that feeds the suggested actions.', 'Simulation: sleep events; Demo: check-in')}
+          ${tr('Distance from Earth', 'Explains why onboard decision support matters: a 1.3 s Moon link versus up to about 22 minutes each way to Mars.', 'Simulation: decision banner')}
+          ${tr('Gravity fields', 'Includes post-flight findings: weaker exercise response at high heart rates, weight loss and heel-bone changes.', 'Timeline events')}
+          ${tr('Hostile closed environments', 'Reports the real cabin atmosphere; a modern comparison in the data shows today\'s ISS CO2 limit (3 mmHg) and symptom bands.', 'Data, References')}
+        </tbody></table></div></section>
+
+      <section class="sx-block"><h2><span class="sx-sn">06</span>Being honest about the data</h2>
+        <p>Every number is one of these kinds, and the app says which:</p>
+        ${kind('ev-nasa', 'Reported', 'Stated in a NASA document and cited. Shown with a "NASA source" badge.')}
+        ${kind('ev-est', 'Interpolated or estimated', 'Drawn between reported points for readability, or filled in where nothing was reported. Labelled in the data and on the vitals cards.')}
+        ${kind('ev-sec', 'Secondary', 'Narrative taken from non-NASA accounts, for example the Mission Control decisions. Badged until a primary source is found.')}
+        ${kind('ev-sim', 'Simulated', 'Generated by the app to show what a modern system adds (blood pressure, oxygen saturation, skin temperature, sleep quality).')}
+        ${kind('ev-live', 'Live (placeholder)', 'The vitals datasheet that stands in for sensors. It lives only on the demo pages.')}
+        ${kind('ev-demo', 'Demo', 'Interactive inputs such as the check-in and the send-and-acknowledge exchange. Never mixed into the historical record.')}</section>
+
+      <section class="sx-block"><h2><span class="sx-sn">07</span>What the brief asks for, and where to find it</h2>
+        <div class="table-scroll"><table class="sx-table"><thead><tr><th>Objective in the brief</th><th>What the app does</th><th>Where</th></tr></thead><tbody>
+          ${tr('Gather health indicators from the user', 'Live vitals (heart rate, blood pressure, breathing, temperature) plus a check-in form (mood, fatigue, symptoms, dosimeter).', '<a href="#astronaut">Demo Astronaut</a>')}
+          ${tr('Help the astronaut evaluate and act', 'Step-by-step alerts, crewmate notices, a body map and suggested actions.', '<a href="#astronaut">Demo Astronaut</a>')}
+          ${tr('Charts, colour coding, interactivity', 'Trend charts, green, amber and red status pills, a clickable body map, a replay clock and jump list.', 'All three app pages')}
+          ${tr('Explain measurements and risks simply', 'Plain-language notes on every card and organ; the limits section lists what a 12-day replay cannot show.', 'Demo Astronaut, Simulation')}
+          ${tr('Use NASA Human Research Program resources', `NASA documents are cited throughout. The official challenge resources are released on ${esc(RES.publishLabel)}.`, '<a href="#resources">Resources</a>')}
+        </tbody></table></div></section>
+
+      <section class="sx-block"><h2><span class="sx-sn">08</span>Limits, and what comes next</h2>
+        <p>This is an educational prototype, not a medical device and not medical advice. It replays one short mission with sparse 1971 sensors, so it cannot show duration-dependent risks.</p>
+        <div class="sx-row"><strong>Next</strong><span>Add the 15 November resources and reference ranges; confirm the in-flight rhythm-event source; add a swappable data adapter so a wearable feed can replace the replay; analyse the ECG waveform itself; learn each astronaut's personal baseline; test the decision support with flight surgeons.</span></div></section>`;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Page: Resources
+   * ------------------------------------------------------------------ */
+
+  function daysUntil(iso) {
+    return Math.ceil((new Date(iso + 'T00:00:00Z').getTime() - Date.now()) / 86400000);
+  }
+
+  function pageResources() {
+    const days = daysUntil(RES.publishDate);
+    const items = RES.items || [];
+    let banner;
+    if (items.length) banner = `<div class="sx-banner good">${I('check')}<div><strong>${items.length} resource${items.length > 1 ? 's' : ''} listed.</strong> Keep adding entries in data/resources.js.</div></div>`;
+    else if (days > 0) banner = `<div class="sx-banner">${I('clock')}<div><strong>The challenge resources are published on ${esc(RES.publishLabel)}.</strong> ${days} day${days > 1 ? 's' : ''} to go. The slots below are ready for them.</div></div>`;
+    else banner = `<div class="sx-banner warn">${I('alert')}<div><strong>The resources are now published.</strong> Add them to data/resources.js (steps below).</div></div>`;
+
+    const card = (r) => `<div class="card sx-res">
+      <div class="sx-res-top"><span class="ev ev-nasa">${esc(r.type || 'Resource')}</span><span class="pill ${r.status === 'used in app' ? 'good' : r.status === 'in progress' ? 'warn' : 'info'}"><span></span>${esc(r.status || 'planned')}</span></div>
+      <strong>${esc(r.title)}</strong><small>${esc(r.publisher || '')}</small>
+      <p>${esc(r.usedFor || '')}</p>
+      ${r.apa ? `<small class="sx-apa">${r.apa}</small>` : ''}
+      ${r.url ? `<a class="btn secondary compact" href="${esc(r.url)}" target="_blank" rel="noopener noreferrer">Open source</a>` : ''}
+    </div>`;
+    const slot = (s) => `<div class="card sx-res sx-slot">
+      <div class="sx-res-top"><span class="ev ev-demo">EMPTY SLOT</span><span class="pill info"><span></span>waiting for ${esc(RES.publishLabel)}</span></div>
+      <strong>${esc(s.kind)}</strong><small>e.g. ${esc(s.example)}</small>
+      <p><b>Plugs into:</b> ${esc(s.plugsInto)}</p></div>`;
+
+    const questions = ['Which measurements can be performed in space?', 'Why is each exam needed?', 'How do the spaceflight hazards affect each indicator?', 'When should a result go to the crew or to flight surgeons?', 'What actions can prevent a critical condition?'];
+    return `<section class="sx-head"><div><div class="eyebrow">05 · NASA SPACE APPS CHALLENGE 2026</div><h1>Mission <em>resources</em></h1>
+        <p>The brief points to NASA Human Research Program material and public resources from other agencies. This page tracks each resource and what it is used for.</p></div></section>
+      ${banner}
+      <h3 class="sx-h3">Resources</h3>
+      <section class="sx-grid2">${items.length ? items.map(card).join('') : (RES.slots || []).map(slot).join('')}</section>
+      <h3 class="sx-h3">Already in use</h3>
+      <p class="sx-note">Until the official list is out, the app already cites NASA documents (Apollo 15 Mission Report, Biomedical Results of Apollo, the Human Research Program hazards page, the CO2 technical brief). See the <a href="#references">References</a> page for the full list.</p>
+      <h3 class="sx-h3">How to add a resource</h3>
+      <ol class="sx-steps">
+        <li>Open <code>data/resources.js</code> and copy the example entry into <code>items</code>. Fill in title, type, URL, what it is used for and its status.</li>
+        <li>Add the APA entry to <code>data/references.js</code> (<code>references</code> and <code>cite</code>), so it appears on the References page.</li>
+        <li>If it holds data or ranges, put them in <code>data/</code> and run <code>node tools/build-data.js</code>; otherwise no build is needed.</li>
+        <li>Refresh the page. The empty slots are replaced by your entries.</li>
+      </ol>
+      <h3 class="sx-h3">Questions every resource should help answer</h3>
+      <p class="sx-note">These come straight from the brief. When a resource answers one, note it in <code>usedFor</code>.</p>
+      <ul class="sx-checks">${questions.map((q) => `<li><span class="sx-box"></span>${esc(q)}</li>`).join('')}</ul>`;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Page: References
+   * ------------------------------------------------------------------ */
+
+  function pageReferences() {
+    const groups = [['nasa', 'NASA and NASA-hosted sources'], ['clinical', 'Medical reference ranges (not NASA)'], ['secondary', 'Secondary sources (non-NASA, narrative only)']];
+    const plain = (h) => h.replace(/<[^>]+>/g, '');
+    const sorted = (g) => Object.entries(REFS.references).filter(([, r]) => r.group === g).sort((a, b) => plain(a[1].apa).localeCompare(plain(b[1].apa)));
+    const rows = REFS.dataUsed.map((d) => `<tr><td><strong>${esc(d.what)}</strong><br><span>${esc(d.values)}</span></td><td>${esc(d.where)}<br>${cite([d.ref].concat(d.refs2 || []))}</td><td>${esc(d.used)}</td></tr>`).join('');
+    return `<section class="sx-head"><div><div class="eyebrow">06 · CITATIONS · APA 7TH EDITION</div><h1>References and <em>data used</em></h1>
+        <p>Where every number comes from, what it is used for, and what the app generates itself. In-text citations across the app link here.</p></div></section>
+      <section class="sx-block"><h2>Data used</h2>
+        <div class="table-scroll"><table class="sx-table"><thead><tr><th>Data and values</th><th>Where it comes from</th><th>Used in the app for</th></tr></thead><tbody>${rows}</tbody></table></div></section>
+      <section class="sx-block"><h2>Generated by this app (not measured)</h2>
+        <ul class="sx-list">${REFS.generated.map((g) => `<li>${esc(g)}</li>`).join('')}</ul></section>
+      <section class="sx-block"><h2>Reference list</h2>
+        ${groups.map(([g, title]) => `<h4>${title}</h4>${sorted(g).map(([, r]) => `<p class="sx-ref">${r.apa}${r.note ? `<small>${esc(r.note)}</small>` : ''}</p>`).join('')}`).join('')}
+        <p class="sx-note">Report and page titles are set in italics, as APA requires. Retrieval dates are shown for pages that can change.</p></section>
+      <section class="sx-block"><h2>Still to verify before submission</h2>
+        <ul class="sx-list">${REFS.toVerify.map((g) => `<li>${esc(g)}</li>`).join('')}</ul></section>`;
+  }
+
+  /* ------------------------------------------------------------------ *
+   * Render + wiring
    * ------------------------------------------------------------------ */
 
   const root = document.getElementById('app');
-  let current = { screen: null, role: null, page: null };
+  let current = 'home';
 
-  const validPages = (role) => (role === 'astronaut' ? astronautNav : controlNav).map(([l]) => slug(l)).concat(role === 'astronaut' ? ['alerts'] : []);
-
-  // Where should this route really go? (null = fine as is). Keeps signed-out visitors out of the app.
-  function guardRoute(r) {
-    if (r.screen === 'app') {
-      if (!session || session.role !== r.role) return `#${r.role}-login`;
-      if (!validPages(r.role).includes(r.page)) return `#${r.role}-dashboard`;
-    }
-    if (r.screen === 'astronaut-login' && session && session.role === 'astronaut') return '#astronaut-dashboard';
-    if (r.screen === 'control-login' && session && session.role === 'control') return '#control-dashboard';
-    return null;
+  function parsePage() {
+    const h = (location.hash || '#home').slice(1).toLowerCase();
+    if (h.startsWith('simulation')) return 'simulation';
+    if (h.startsWith('control')) return 'control';
+    if (h.startsWith('astronaut') || h === 'role') return 'astronaut';
+    if (h === 'about') return 'project';
+    if (NAV.some(([id]) => id === h)) return h;
+    return 'home';
   }
+
+  const PAGES = { home: pageHome, astronaut: pageAstronaut, control: pageControl, simulation: pageSimulation, project: pageProject, resources: pageResources, references: pageReferences };
 
   function render() {
-    const r = parseHash();
-    const redirect = guardRoute(r);
-    if (redirect) { location.replace(redirect); return; }
-    current = r;
-    // The replay clock only makes sense on pages that show its controls — never leave it running invisibly.
-    if (r.screen !== 'app' || !usesSimBar(r.page)) stopClock();
-    if (r.screen === 'app') {
-      const key = `${r.role}-${r.page}`;
-      if (trail[trail.length - 1] !== key) { trail.push(key); if (trail.length > 20) trail.shift(); }
-    } else trail = [];
-    if (r.screen === 'role') root.innerHTML = tplRoleSelect();
-    else if (r.screen === 'astronaut-login') root.innerHTML = tplLogin('astronaut');
-    else if (r.screen === 'control-login') root.innerHTML = tplLogin('control');
-    else root.innerHTML = tplShell(r.role, r.page);
+    current = parsePage();
+    if (current !== 'simulation') stopClock();
+    root.innerHTML = `${tplTopbar(current)}<main class="sx-page" id="main">${PAGES[current]()}</main>
+      <footer class="sx-foot"><strong>Astronomican</strong> · Educational prototype for the NASA Space Apps Challenge 2026. Not a medical device and not medical advice. Historical figures are cited on the <a href="#references">References</a> page; anything the app computes is labelled.</footer>`;
     AHM_ICONS.hydrate(root);
-    wire(r);
-    document.body.classList.toggle('reduce-motion', window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    window.scrollTo({ top: 0 });
+    document.title = `${NAV.find(([id]) => id === current)[1]} · Astronomican`;
   }
 
-  // Re-render only the live content (sim tick / filter change inside the shell) — keeps sidebar/topbar stable.
-  function renderContent() {
-    const r = parseHash();
-    if (r.screen !== 'app') return;
-    current = r;
-    const body = document.getElementById('page-body');
-    const readout = document.getElementById('sim-readout');
-    if (readout) readout.textContent = AHM.formatGet(sim.hour);
-    if (body && r.page !== 'check-in') { body.innerHTML = pageRouter(r.role, r.page); AHM_ICONS.hydrate(body); }
+  // Make `from` look like `to` without recreating nodes that already match. Because the nodes survive,
+  // hover, focus, scroll position and clicks keep working while the clock or the live feed is updating.
+  function morph(from, to) {
+    const keepOpen = (el, name) => el.nodeName === 'DETAILS' && name === 'open';
+    const syncAttrs = (f, t) => {
+      Array.from(f.attributes).forEach((at) => { if (!t.hasAttribute(at.name) && !keepOpen(f, at.name)) f.removeAttribute(at.name); });
+      Array.from(t.attributes).forEach((at) => { if (f.getAttribute(at.name) !== at.value && !keepOpen(f, at.name)) f.setAttribute(at.name, at.value); });
+    };
+    const fk = Array.from(from.childNodes), tk = Array.from(to.childNodes);
+    tk.forEach((t, i) => {
+      const f = fk[i];
+      if (!f) from.appendChild(document.importNode(t, true));
+      else if (f.nodeType !== t.nodeType || f.nodeName !== t.nodeName) from.replaceChild(document.importNode(t, true), f);
+      else if (t.nodeType === 3) { if (f.nodeValue !== t.nodeValue) f.nodeValue = t.nodeValue; }
+      else if (t.nodeType === 1) { syncAttrs(f, t); morph(f, t); }
+    });
+    for (let i = fk.length - 1; i >= tk.length; i--) from.removeChild(fk[i]);
+  }
+
+  function patch(id, html) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const tpl = document.createElement('template');
+    tpl.innerHTML = html;
+    AHM_ICONS.hydrate(tpl.content);
+    morph(el, tpl.content);
+  }
+
+  // Update everything that depends on the replay clock or the live feed (keeps the check-in form, slider and open sections stable).
+  function renderLive() {
+    if (!LIVE_PAGES.includes(current)) return;
+    if (current === 'astronaut') {
+      const c = demoCtx();
+      patch('side-body', sideHtml(c));
+      patch('feed-body', feedHtml());
+      patch('live-body', demoBody(c));
+    } else if (current === 'control') {
+      patch('live-body', controlLive());
+    } else {
+      const c = simCtx();
+      patch('side-body', sideHtml(c));
+      patch('live-body', simBody(c));
+    }
+    const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+    set('sim-readout', AHM.formatGet(sim.hour));
+    set('sim-day', `Day ${ENGINE.missionDay(sim.hour) + 1} of ${ENGINE.missionTotalDays()}`);
+    set('ci-get', AHM.formatGet(sim.hour));
     const range = document.getElementById('sim-range');
     if (range && document.activeElement !== range) range.value = sim.hour;
     const playBtn = document.getElementById('sim-play');
-    if (playBtn) { playBtn.innerHTML = `${I(sim.playing ? 'pause' : 'play', 14)}${sim.playing ? 'Pause' : 'Simulate'}`; playBtn.classList.toggle('is-playing', sim.playing); AHM_ICONS.hydrate(playBtn); }
-    const sync = document.querySelector('.sync-status');
-    if (sync) sync.innerHTML = `<span class="status-dot ${sim.playing ? 'live' : ''}"></span> ${sim.playing ? 'REPLAYING' : 'PAUSED'} <strong>GET ${AHM.formatGet(sim.hour)}</strong>`;
-    const missionBar = document.querySelector('.side-mission');
-    if (missionBar) {
-      missionBar.querySelector('.mission-progress span').style.width = `${Math.min(100, sim.hour / TOTAL_HOURS * 100).toFixed(1)}%`;
-      missionBar.querySelectorAll('.side-mission-meta span')[0].textContent = `DAY ${ENGINE.missionDay(sim.hour)}`;
-      missionBar.querySelectorAll('.side-mission-meta span')[1].textContent = `${Math.min(100, Math.round(sim.hour / TOTAL_HOURS * 100))}%`;
-    }
+    if (playBtn) { playBtn.innerHTML = `${I(sim.playing ? 'pause' : 'play', 14)}<span>${sim.playing ? 'Pause' : 'Simulate'}</span>`; playBtn.classList.toggle('is-playing', sim.playing); AHM_ICONS.hydrate(playBtn); }
+    NAV.forEach(([id, label]) => {
+      const link = document.querySelector(`.sx-nav a[href="#${id}"]`);
+      if (link && (id === 'control' || id === 'simulation')) { const html = navLinkHtml(id, label); if (link.innerHTML !== html) link.innerHTML = html; }
+    });
   }
 
-  function setHour(h) {
-    sim.hour = Math.max(0, Math.min(TOTAL_HOURS, h));
-    renderContent();
-  }
-
-  function stopClock() {
-    sim.playing = false;
-    if (sim.timer) clearInterval(sim.timer);
-    sim.timer = null;
-  }
-
+  function setHour(h) { sim.hour = Math.max(0, Math.min(TOTAL_HOURS, h)); renderLive(); }
+  function stopClock() { sim.playing = false; if (sim.timer) clearInterval(sim.timer); sim.timer = null; }
+  function pause() { stopClock(); renderLive(); }
   function play() {
     if (sim.playing) return;
-    if (sim.hour >= TOTAL_HOURS) sim.hour = 0;            // at splashdown, Simulate replays from launch
+    if (sim.hour >= TOTAL_HOURS) sim.hour = 0;
     sim.playing = true;
-    renderContent();
+    renderLive();
     sim.timer = setInterval(() => {
       if (sim.hour >= TOTAL_HOURS) { pause(); return; }
       setHour(sim.hour + sim.speed * (TICK_MS / 1000));
     }, TICK_MS);
   }
-  function pause() {
-    stopClock();
-    renderContent();
-  }
 
-  function goBack() {
-    if (current.screen === 'app' && trail.length > 1) { trail.pop(); navigate(`#${trail[trail.length - 1]}`); }
-    else navigate('#role');
-  }
-
-  function logout() {
-    const role = (session && session.role) || current.role || 'astronaut';
-    stopClock();
-    saveSession(null);
-    trail = [];
-    flash = 'You have been logged out.';
-    navigate(`#${role}-login`);
-  }
-
-  function wire(r) {
-    if (r.screen === 'role') {
-      const cards = Array.from(root.querySelectorAll('.role-card'));
-      const cont = document.getElementById('btn-continue');
-      // Update in place (no re-render) so keyboard focus and the hover state survive a selection.
-      const choose = (role, focus) => {
-        selectedRole = role;
-        try { sessionStorage.setItem(ROLE_KEY, role); } catch (e) { /* storage unavailable */ }
-        cards.forEach((c) => {
-          const on = c.dataset.role === role;
-          c.classList.toggle('active', on);
-          c.setAttribute('aria-checked', String(on));
-          c.tabIndex = on ? 0 : -1;
-          c.querySelector('.radio-indicator').innerHTML = on ? '<span></span>' : '';
-          c.querySelector('.role-card-footer').firstChild.textContent = on ? 'SELECTED' : 'SELECT ROLE';
-          if (on && focus) c.focus();
-        });
-        cont.innerHTML = `Continue as ${role === 'astronaut' ? 'Astronaut' : 'Mission Control'}${I('arrow')}`;
-        AHM_ICONS.hydrate(cont);
-      };
-      cards.forEach((btn, i) => {
-        btn.addEventListener('click', () => choose(btn.dataset.role, false));
-        btn.addEventListener('dblclick', () => navigate(`#${btn.dataset.role}-login`));
-        btn.addEventListener('keydown', (e) => {
-          const step = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }[e.key];
-          if (!step) return;
-          e.preventDefault();
-          choose(cards[(i + step + cards.length) % cards.length].dataset.role, true);
-        });
-      });
-      cont.addEventListener('click', () => navigate(`#${selectedRole}-login`));
-      const aboutLink = document.getElementById('link-about');
-      if (aboutLink) aboutLink.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('about').scrollIntoView({ behavior: 'smooth' }); });
-    }
-
-    if (r.screen === 'astronaut-login' || r.screen === 'control-login') {
-      const role = r.screen === 'astronaut-login' ? 'astronaut' : 'control';
-      const form = document.getElementById('login-form');
-      const err = document.getElementById('login-error');
-      const showError = (msg) => { err.textContent = msg; err.hidden = false; };
-      form.addEventListener('input', () => { err.hidden = true; });
-      form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const id = form.elements.username.value.trim();
-        const pw = form.elements.password.value;
-        if (!id || !pw) { showError(`Enter your ${role === 'astronaut' ? 'Astronaut' : 'Operator'} ID and password.`); (id ? form.elements.password : form.elements.username).focus(); return; }
-        if (role === 'astronaut') {
-          const key = id.toLowerCase();
-          const acct = Object.prototype.hasOwnProperty.call(ACCOUNTS, key) ? ACCOUNTS[key] : null;
-          if (!acct || acct.password !== pw) { showError('Incorrect Astronaut ID or password. Please try again.'); form.elements.password.value = ''; form.elements.password.focus(); return; }
-          saveSession({ role, user: key, crewId: acct.crewId });
-        } else {
-          saveSession({ role, user: id });
-        }
-        trail = [];
-        navigate(`#${role}-dashboard`);
-      });
-      form.elements.username.focus();
-    }
-
-    if (r.screen === 'app') {
-      wireSimBar();
-      const save = document.getElementById('ci-save');
-      if (save) save.addEventListener('click', () => {
-        const v = (f) => Number(root.querySelector(`[data-f="${f}"]`).value), dose = document.getElementById('ci-dose').value;
-        AHM.logDemoEvent({ type: 'checkin', crewId: myCrew(), get_hours: sim.hour, mood: v('mood'), fatigue: v('fatigue'),
-          symptoms: document.getElementById('ci-sym').value.trim(), dose: dose === '' ? null : Number(dose) });
-        render();
-        toast(`Check-in logged at GET ${AHM.formatGet(sim.hour)}`);
-      });
-    }
-  }
-
-  function wireSimBar() {
-    const playBtn = document.getElementById('sim-play');
-    if (!playBtn) return;
-    playBtn.addEventListener('click', () => (sim.playing ? pause() : play()));
-    document.getElementById('sim-back').addEventListener('click', () => { pause(); setHour(sim.hour - 6); });
-    document.getElementById('sim-fwd').addEventListener('click', () => { pause(); setHour(sim.hour + 6); });
-    document.getElementById('sim-reset').addEventListener('click', () => { pause(); setHour(0); });
-    document.getElementById('sim-range').addEventListener('input', (e) => { pause(); setHour(Number(e.target.value)); });
-    document.getElementById('sim-jump').addEventListener('change', (e) => { if (!e.target.value) return; pause(); setHour(Number(e.target.value)); e.target.value = ''; });
-  }
-
-  // One delegated handler for everything inside the app. Page content is re-rendered on every replay
-  // tick, so per-element listeners would silently die after the first tick.
   root.addEventListener('click', (ev) => {
-    const el = ev.target.closest('[data-nav],[data-act]');
+    if (ev.target.closest('#sim-play')) { sim.playing ? pause() : play(); return; }
+    if (ev.target.closest('#ci-save')) {
+      const v = (f) => Number(root.querySelector(`[data-f="${f}"]`).value), dose = document.getElementById('ci-dose').value;
+      AHM.logDemoEvent({ type: 'checkin', crewId: state.crew, mood: v('mood'), fatigue: v('fatigue'),
+        symptoms: document.getElementById('ci-sym').value.trim(), dose: dose === '' ? null : Number(dose) });
+      const box = document.getElementById('checkin-body');
+      box.innerHTML = checkinBlock();
+      AHM_ICONS.hydrate(box);
+      renderLive();
+      toast('Check-in logged');
+      return;
+    }
+    const el = ev.target.closest('[data-act]');
     if (!el || !root.contains(el)) return;
-    if (el.dataset.nav) { navigate(`#${el.dataset.nav}`); return; }
     const val = el.dataset.val;
     switch (el.dataset.act) {
-      case 'back': goBack(); break;
-      case 'logout': logout(); break;
-      case 'print': window.print(); break;
-      case 'need-access': { const h = document.getElementById('login-help'); if (h) h.hidden = !h.hidden; break; }
-      case 'toggle': { const on = !el.classList.contains('active'); el.classList.toggle('active', on); el.setAttribute('aria-checked', String(on)); toggles[el.dataset.key] = on; break; }
-      case 'edit-profile': toast('Profile editing is locked during the Apollo 15 replay.'); break;
-      case 'alert-filter': alertFilter = val; renderContent(); break;
-      case 'alert-review': reviewed.add(el.dataset.key); renderContent(); break;
-      case 'alert-review-all': visibleEvents(current.role).filter((e) => e.severity && e.get_hours <= sim.hour).forEach((e) => reviewed.add(alertKey(e))); renderContent(); toast('All alerts marked as reviewed'); break;
-      case 'crew-sort': crewSort = val; renderContent(); break;
-      case 'analytics-crew': analyticsCrew = val; renderContent(); break;
-      case 'view-profile': analyticsCrew = el.dataset.crew; navigate('#control-health-analytics'); break;
-      case 'export-csv': exportReportsCsv(); break;
-      case 'dl-report': downloadReport(el.dataset.ref); break;
+      case 'crew': state.crew = val; state.organ = null; render(); break;
+      case 'open-crew': state.crew = val; state.organ = null; if (location.hash === '#astronaut') render(); else location.hash = '#astronaut'; break;
+      case 'organ': state.organ = val; renderLive(); if (window.innerWidth < 900) document.getElementById('organ-detail').scrollIntoView({ block: 'nearest', behavior: 'smooth' }); break;
+      case 'skip-alert': LIVE.skipToNextAlert(state.crew); toast('Jumped the placeholder feed to the next alert'); break;
+      case 'live-ack': LIVE.ackAlert(el.dataset.id); toast('Acknowledged. Your crewmates can see you are on it.'); break;
+      case 'notice-ack': LIVE.ackNotice(el.dataset.id); toast('Thanks. The sender can see you saw it.'); break;
+      case 'review': reviewed.add(el.dataset.key); renderLive(); toast('Marked as reviewed'); break;
+      case 'send-rec': {
+        const e = ENGINE.DATA.events.find((x) => alertKey(x) === el.dataset.key);
+        const c = crewById(el.dataset.crew);
+        const snap = ENGINE.crewSnapshot(c.id, sim.hour);
+        const text = ENGINE.advise(snap, null)[0] || 'Repeat the vitals check, limit exertion and report any symptoms.';
+        AHM.logDemoEvent({ type: 'message', crewId: c.id, get_hours: sim.hour, alertKey: alertKey(e), title: `Recommendation sent to ${c.name} (demo)`, detail: text });
+        renderLive(); toast(`Recommendation sent to ${ENGINE.crewShortName(c)} (demo)`); break;
+      }
+      case 'ack':
+        AHM.acknowledgeDemoEvent(el.dataset.id);
+        AHM.logDemoEvent({ type: 'ack', crewId: el.dataset.crew, get_hours: sim.hour, title: `${crewById(el.dataset.crew).name} acknowledged the recommendation (demo)` });
+        renderLive(); toast('Acknowledged'); break;
       default: break;
     }
   });
-  root.addEventListener('change', (ev) => {
-    const el = ev.target.closest('[data-change]');
-    if (el && el.dataset.change === 'report-cat') { reportCat = el.value; renderContent(); }
-  });
-  root.addEventListener('input', (ev) => {
-    if (ev.target.matches('.slider-row input')) ev.target.nextElementSibling.textContent = ev.target.value;
+
+  root.addEventListener('keydown', (ev) => {
+    const g = ev.target.closest && ev.target.closest('[data-act="organ"]');
+    if (g && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); state.organ = g.dataset.val; renderLive(); const again = root.querySelector(`[data-act="organ"][data-val="${state.organ}"]`); if (again) again.focus(); }
   });
 
+  root.addEventListener('input', (ev) => {
+    if (ev.target.matches('.slider-row input')) ev.target.nextElementSibling.textContent = ev.target.value;
+    if (ev.target.id === 'sim-range') { stopClock(); setHour(Number(ev.target.value)); }
+  });
+
+  root.addEventListener('change', (ev) => {
+    if (ev.target.id === 'sim-jump' && ev.target.value !== '') { pause(); setHour(Number(ev.target.value)); ev.target.value = ''; }
+  });
+
+  // Remember which <details> sections are open across live re-renders.
+  root.addEventListener('toggle', (ev) => {
+    const d = ev.target;
+    if (d.matches && d.matches('details[data-key]')) state.open[d.dataset.key] = d.open;
+  }, true);
+
+  setInterval(() => { const c = document.getElementById('utc-clock'); if (c) c.textContent = utcNow(); }, 1000);
   window.addEventListener('hashchange', render);
+  LIVE.onChange(renderLive);
+  LIVE.start();
   render();
 })();

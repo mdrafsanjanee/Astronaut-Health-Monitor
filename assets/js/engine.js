@@ -40,13 +40,6 @@ const ENGINE = (() => {
     return ['Requires review', 'A flagged event is active. Flight surgeons are assessing in real time.'];
   }
 
-  function boneDensityPct(hour) {
-    // Real endpoint: ~4% mineral loss by splashdown (M-078 experiment).
-    // The accumulation curve itself was never measured in-flight, so it's
-    // modeled as a smooth ramp against elapsed time — endpoint is real.
-    return -(Math.min(1, hour / TOTAL_HOURS) * 4);
-  }
-
   function missionDay(hour) { return Math.floor(hour / 24); }
   function missionTotalDays() { return Math.ceil(TOTAL_HOURS / 24); }
 
@@ -97,7 +90,7 @@ const ENGINE = (() => {
 
   return {
     DATA, CREW, CREW_ROWS, TOTAL_HOURS, VREF,
-    crewShortName, healthScore, scoreCopy, boneDensityPct, missionDay, missionTotalDays,
+    crewShortName, healthScore, scoreCopy, missionDay, missionTotalDays,
     crewSnapshot, allCrewSnapshots, latestCheckin, advise, series, avg, eventsUpTo, recentEvents, EVENT_TAG_LABEL,
   };
 })();
