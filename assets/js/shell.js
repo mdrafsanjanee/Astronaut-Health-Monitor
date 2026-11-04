@@ -154,7 +154,6 @@
       <nav class="sx-nav" id="main-nav" aria-label="Pages">
         ${NAV.map(([id, label]) => `<a href="#${id}" class="${id === page ? 'active' : ''}" ${id === page ? 'aria-current="page"' : ''}>${navLinkHtml(id, label)}</a>`).join('')}
       </nav>
-      <span class="sx-clock" title="Coordinated Universal Time">UTC <b id="utc-clock">${utcNow()}</b></span>
       <button class="sx-menu" data-act="menu" type="button" aria-expanded="false" aria-controls="main-nav" aria-label="Open menu"><span></span><span></span><span></span></button>
     </header>
     <nav class="sx-tabbar" aria-label="Main pages">${TABBAR.map(([id, label, icon]) => `<a href="#${id}" class="${id === page ? 'active' : ''}">${I(icon, 20)}<span>${label}</span></a>`).join('')}</nav>`;
@@ -201,7 +200,7 @@
               <radialGradient id="moong" cx=".35" cy=".3" r=".9"><stop offset="0" stop-color="#f1f3f8"/><stop offset="1" stop-color="#8f98ad"/></radialGradient>
               <radialGradient id="earthglow"><stop offset="0" stop-color="#5b7cff" stop-opacity=".35"/><stop offset="1" stop-color="#5b7cff" stop-opacity="0"/></radialGradient>
             </defs>
-            <g class="stars">${[[40,40],[120,330],[210,40],[300,350],[360,30],[500,60],[520,300],[470,350],[60,120],[250,200],[330,250],[180,150]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 3 ? 1 : 1.6}"></circle>`).join('')}</g>
+            <g class="stars">${[[40, 40], [120, 330], [210, 40], [300, 350], [360, 30], [500, 60], [520, 300], [470, 350], [60, 120], [250, 200], [330, 250], [180, 150]].map(([x, y], i) => `<circle cx="${x}" cy="${y}" r="${i % 3 ? 1 : 1.6}"></circle>`).join('')}</g>
             <circle cx="90" cy="200" r="88" fill="url(#earthglow)"></circle>
             <circle cx="90" cy="200" r="40" fill="url(#earthg)"></circle>
             <circle class="orbit-ring" cx="440" cy="170" r="52"></circle>
@@ -279,7 +278,7 @@
     const arr = s.assess.alerts.some((a) => /arrhythmia/i.test(a.title));
     const banner = (cls, icon, kicker, body) => `<div class="insight-banner ${cls}"><div class="insight-icon">${I(icon)}</div><div><span>${kicker}</span><strong>${body}</strong></div></div>`;
     return (arr ? banner('', 'orbit', 'WHY ONBOARD DECISION SUPPORT',
-        'Houston was about 1.3 s away for this call, so flight surgeons could weigh in live. A Mars crew facing the same event would wait up to about 22 min each way and have to decide alone.') : '')
+      'Houston was about 1.3 s away for this call, so flight surgeons could weigh in live. A Mars crew facing the same event would wait up to about 22 min each way and have to decide alone.') : '')
       + banner(acts.length ? 'is-message' : '', 'spark', 'SUGGESTED ACTION · ONBOARD RULES',
         acts.length ? acts.map(esc).join('<br>') : 'No action needed. Vitals and check-ins are within range.');
   }
@@ -523,8 +522,8 @@
       <ol class="sx-steps">${a.steps.map((st) => `<li>${esc(st)}</li>`).join('')}</ol>
       <div class="sx-alert-act"><div><span class="card-kicker">CREWMATES NOTIFIED</span><strong>${esc(notified)}</strong></div>
         <div class="sx-btns">${mc
-          ? `<button class="btn secondary compact" data-act="review" data-key="${key}" type="button" ${done ? 'disabled' : ''}>${done ? 'Reviewed' : 'Mark reviewed'}</button>`
-          : `<button class="btn ${a.ack ? 'secondary' : 'primary'} compact" data-act="live-ack" data-id="${a.id}" type="button" ${a.ack ? 'disabled' : ''}>${a.ack ? 'Acknowledged' : 'I am doing this'}</button>`}</div></div>
+        ? `<button class="btn secondary compact" data-act="review" data-key="${key}" type="button" ${done ? 'disabled' : ''}>${done ? 'Reviewed' : 'Mark reviewed'}</button>`
+        : `<button class="btn ${a.ack ? 'secondary' : 'primary'} compact" data-act="live-ack" data-id="${a.id}" type="button" ${a.ack ? 'disabled' : ''}>${a.ack ? 'Acknowledged' : 'I am doing this'}</button>`}</div></div>
       <small class="ev-cite">${a.cite.length ? `Rule source: ${cite(a.cite)}` : 'Rule: this app\'s own band (see References)'}</small>
     </div>`;
   }
@@ -751,10 +750,10 @@
       ${liveAll.length ? liveAll.map((a) => liveAlertCard(a, true)).join('') : '<div class="empty">All quiet. No live alerts right now.<br><br><button class="btn secondary compact" data-act="skip-alert" type="button">Trigger a demo alert</button></div>'}
       <h3 class="sx-h3">Live heart rate by crew <small>last 30 readings, one every ${Math.round(LIVE.intervalMs / 1000)} s</small></h3>
       <section class="sx-grid3">${ENGINE.CREW.map((c) => {
-        const pts = LIVE.history(c.id).map((r, i) => ({ x: i, y: r.hr }));
-        const latest = LIVE.latest(c.id);
-        return ChartCard({ kicker: ENGINE.crewShortName(c).toUpperCase(), label: c.role, meta: latest ? `NOW ${fmt0(latest.hr)} BPM` : '', body: LineChart({ color: c.id === 'LMP' ? 'orange' : c.id === 'CMP' ? 'violet' : 'cyan', points: pts }) });
-      }).join('')}</section>
+      const pts = LIVE.history(c.id).map((r, i) => ({ x: i, y: r.hr }));
+      const latest = LIVE.latest(c.id);
+      return ChartCard({ kicker: ENGINE.crewShortName(c).toUpperCase(), label: c.role, meta: latest ? `NOW ${fmt0(latest.hr)} BPM` : '', body: LineChart({ color: c.id === 'LMP' ? 'orange' : c.id === 'CMP' ? 'violet' : 'cyan', points: pts }) });
+    }).join('')}</section>
       <h3 class="sx-h3">Live alert log</h3>
       <ul class="ev-list">${LIVE.log().map((l) => `<li class="ev-item ${l.level === 'alert' ? 'critical' : l.level === 'watch' ? 'warn' : ''}"><div class="ev-time">${stamp(l.ts)}</div><div class="ev-main"><div class="ev-title"><strong>${esc(l.text)}</strong><span class="ev ev-live">LIVE · placeholder feed</span></div></div></li>`).join('') || '<li class="empty">No alerts yet. The placeholder datasheet raises one within about two minutes.</li>'}</ul>`;
   }
@@ -1064,8 +1063,10 @@
     if (ev.target.closest('#sim-play')) { sim.playing ? pause() : play(); return; }
     if (ev.target.closest('#ci-save')) {
       const v = (f) => Number(root.querySelector(`[data-f="${f}"]`).value), dose = document.getElementById('ci-dose').value;
-      AHM.logDemoEvent({ type: 'checkin', crewId: state.crew, mood: v('mood'), fatigue: v('fatigue'),
-        symptoms: document.getElementById('ci-sym').value.trim(), dose: dose === '' ? null : Number(dose) });
+      AHM.logDemoEvent({
+        type: 'checkin', crewId: state.crew, mood: v('mood'), fatigue: v('fatigue'),
+        symptoms: document.getElementById('ci-sym').value.trim(), dose: dose === '' ? null : Number(dose)
+      });
       const box = document.getElementById('checkin-body');
       box.innerHTML = checkinBlock();
       AHM_ICONS.hydrate(box);
