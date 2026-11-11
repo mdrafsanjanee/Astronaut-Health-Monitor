@@ -56,7 +56,12 @@ window.AHM_DATA = {
     "detail": "Apollo 15 lifts off from Kennedy Space Center, Launch Complex 39A, on a Saturn V (SA-510).",
     "crew_id": null,
     "precision": "exact",
-    "source": "NASA, Apollo 15 Mission Details (nasa.gov/mission_pages/apollo/missions/apollo15.html)"
+    "source": "NASA, Apollo 15 Mission Details (nasa.gov/mission_pages/apollo/missions/apollo15.html)",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Section 1",
+    "evidence": "primary"
   },
   {
     "get_hours": 104.708,
@@ -65,7 +70,13 @@ window.AHM_DATA = {
     "detail": "Lunar Module Falcon (Scott, Irwin) lands at Hadley-Apennine, GET 104:42:29.",
     "crew_id": null,
     "precision": "exact",
-    "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I, via an.rsl.wustl.edu/apollo/data/A15/pages/time"
+    "source": "Apollo 15 Mission Report (MSC-05161), Table 4-I, via an.rsl.wustl.edu/apollo/data/A15/pages/time",
+    "refs": [
+      "apollo15_mr",
+      "alsj_sun"
+    ],
+    "where": "Table 4-I",
+    "evidence": "primary"
   },
   {
     "get_hours": 106.713,
@@ -74,7 +85,12 @@ window.AHM_DATA = {
     "detail": "Scott performs a stand-up EVA through the LM's top hatch, photographing the landing site (GET 106:42:49–107:15:56).",
     "crew_id": "CDR",
     "precision": "exact",
-    "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
+    "source": "Apollo 15 Mission Report (MSC-05161), Table 4-I",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Table 4-I",
+    "evidence": "primary"
   },
   {
     "get_hours": 107.5,
@@ -84,7 +100,12 @@ window.AHM_DATA = {
     "crew_id": null,
     "precision": "approximate",
     "source": "Apollo 15 Mission Report, Section 10.2.3 (Sleep)",
-    "sleep_quality_pct": 80
+    "sleep_quality_pct": 80,
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Section 10.2.3",
+    "evidence": "primary"
   },
   {
     "get_hours": 119.655,
@@ -93,7 +114,12 @@ window.AHM_DATA = {
     "detail": "LM depressurized, GET 119:39:17. First use of the Lunar Roving Vehicle in history.",
     "crew_id": null,
     "precision": "exact",
-    "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
+    "source": "Apollo 15 Mission Report (MSC-05161), Table 4-I",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Table 4-I",
+    "evidence": "primary"
   },
   {
     "get_hours": 126.2,
@@ -102,7 +128,12 @@ window.AHM_DATA = {
     "detail": "LM repressurized, GET 126:11:59. Duration 6h 32m 42s. Average heart rate: Scott 92 bpm, Irwin 125 bpm.",
     "crew_id": null,
     "precision": "exact",
-    "source": "Apollo 15 Mission Report, Section 10 (Biomedical Evaluation); an.rsl.wustl.edu timeline"
+    "source": "Apollo 15 Mission Report, Section 10 (Biomedical Evaluation); an.rsl.wustl.edu timeline",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Sections 10 and 10.1",
+    "evidence": "primary"
   },
   {
     "get_hours": 130,
@@ -112,7 +143,12 @@ window.AHM_DATA = {
     "crew_id": null,
     "precision": "approximate",
     "source": "Apollo 15 Mission Report, Section 10.2.3 (Sleep)",
-    "sleep_quality_pct": 70
+    "sleep_quality_pct": 70,
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Section 10.2.3",
+    "evidence": "primary"
   },
   {
     "get_hours": 142.247,
@@ -121,7 +157,12 @@ window.AHM_DATA = {
     "detail": "LM depressurized, GET 142:14:48.",
     "crew_id": null,
     "precision": "exact",
-    "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
+    "source": "Apollo 15 Mission Report (MSC-05161), Table 4-I",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Table 4-I",
+    "evidence": "primary"
   },
   {
     "get_hours": 149.45,
@@ -130,7 +171,12 @@ window.AHM_DATA = {
     "detail": "LM repressurized, GET 149:27:02. Duration 7h 12m 14s. Average heart rate: Scott 84 bpm, Irwin 107 bpm.",
     "crew_id": null,
     "precision": "exact",
-    "source": "Apollo 15 Mission Report, Section 10; an.rsl.wustl.edu timeline"
+    "source": "Apollo 15 Mission Report, Section 10; an.rsl.wustl.edu timeline",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Sections 10 and 10.1",
+    "evidence": "primary"
   },
   {
     "get_hours": 150,
@@ -139,7 +185,12 @@ window.AHM_DATA = {
     "detail": "Scott develops pain in his right shoulder after a difficult deep-core-tube drilling operation during surface work. He takes aspirin for relief — 14 tablets total across the mission, the only medication either surface crewman used.",
     "crew_id": "CDR",
     "precision": "approximate",
-    "source": "Apollo 15 Mission Report, Section 10.2.2 (Medications)"
+    "source": "Apollo 15 Mission Report, Section 10.2.2 (Medications)",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Section 10.2.2",
+    "evidence": "primary"
   },
   {
     "get_hours": 155,
@@ -149,7 +200,12 @@ window.AHM_DATA = {
     "crew_id": null,
     "precision": "approximate",
     "source": "Apollo 15 Mission Report, Section 10.2.3 (Sleep)",
-    "sleep_quality_pct": 55
+    "sleep_quality_pct": 55,
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Section 10.2.3",
+    "evidence": "primary"
   },
   {
     "get_hours": 163.304,
@@ -158,7 +214,12 @@ window.AHM_DATA = {
     "detail": "LM depressurized, GET 163:18:14.",
     "crew_id": null,
     "precision": "exact",
-    "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
+    "source": "Apollo 15 Mission Report (MSC-05161), Table 4-I",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Table 4-I",
+    "evidence": "primary"
   },
   {
     "get_hours": 168.134,
@@ -167,7 +228,12 @@ window.AHM_DATA = {
     "detail": "LM repressurized, GET 168:08:04. Duration 4h 49m 50s. Average heart rate: Scott 85 bpm, Irwin 105 bpm.",
     "crew_id": null,
     "precision": "exact",
-    "source": "Apollo 15 Mission Report, Section 10; an.rsl.wustl.edu timeline"
+    "source": "Apollo 15 Mission Report, Section 10; an.rsl.wustl.edu timeline",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Sections 10 and 10.1",
+    "evidence": "primary"
   },
   {
     "get_hours": 171.623,
@@ -176,7 +242,12 @@ window.AHM_DATA = {
     "detail": "Falcon's ascent stage lifts off the Moon, GET 171:37:23, after 66h 55m on the surface.",
     "crew_id": null,
     "precision": "exact",
-    "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
+    "source": "Apollo 15 Mission Report (MSC-05161), Table 4-I",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Table 4-I",
+    "evidence": "primary"
   },
   {
     "get_hours": 173.6,
@@ -185,17 +256,26 @@ window.AHM_DATA = {
     "detail": "Falcon docks with Command Module Endeavour, reuniting the crew with Worden in lunar orbit.",
     "crew_id": null,
     "precision": "approximate",
-    "source": "Estimated from standard Apollo rendezvous timelines; exact docking GET not in the sources used here"
+    "source": "Estimated from standard Apollo rendezvous timelines; exact docking GET not in the sources used here",
+    "refs": [],
+    "where": "",
+    "evidence": "estimated"
   },
   {
     "get_hours": 178,
     "category": "medical",
     "title": "Cardiac arrhythmia detected (Irwin)",
     "severity": "CRITICAL",
-    "detail": "Flight surgeons on the ground observe a bigeminy rhythm — paired heartbeats with pauses — on Irwin's EKG telemetry: 5 premature ventricular contractions (PVCs) in 30 seconds. Likely cause: potassium loss (hypokalemia) from mission stress and workload.",
+    "detail": "Flight surgeons on the ground observe a bigeminy rhythm (paired heartbeats with pauses) on Irwin's EKG telemetry after the Lunar Module returns to lunar orbit. Secondary accounts say it returned to normal and stayed normal until splashdown. The Mission Report's medical section does not describe it, and the exact time is approximate.",
     "crew_id": "LMP",
     "precision": "approximate",
-    "source": "Delp/arXiv:2208.00892 (citing flight data); Wikipedia \"Return of Apollo 15 to Earth\"; KUOW \"Primed\" (Dr. Charles Berry quote)"
+    "source": "Delp/arXiv:2208.00892 (citing flight data); Wikipedia \"Return of Apollo 15 to Earth\"; KUOW \"Primed\" (Dr. Charles Berry quote)",
+    "refs": [
+      "sp368",
+      "wiki_return15"
+    ],
+    "where": "chapter to be confirmed",
+    "evidence": "secondary"
   },
   {
     "get_hours": 178.5,
@@ -205,7 +285,13 @@ window.AHM_DATA = {
     "detail": "NASA's chief flight surgeon, Dr. Charles Berry, calls Irwin's EKG \"a serious situation\" — the kind he'd put in an ICU on Earth. Flight leadership (Kraft, Kranz) choose not to tell Scott, reasoning Irwin is already effectively monitored, on pure oxygen, in zero-g. The crew is not told during the mission.",
     "crew_id": "LMP",
     "precision": "approximate",
-    "source": "Wikipedia \"Return of Apollo 15 to Earth\"; collectSPACE forum discussion citing Kraft's and Kranz's memoirs; KUOW \"Primed\" podcast"
+    "source": "Wikipedia \"Return of Apollo 15 to Earth\"; collectSPACE forum discussion citing Kraft's and Kranz's memoirs; KUOW \"Primed\" podcast",
+    "refs": [
+      "wiki_return15",
+      "collectspace_thread"
+    ],
+    "where": "",
+    "evidence": "secondary"
   },
   {
     "get_hours": 179.5,
@@ -215,7 +301,12 @@ window.AHM_DATA = {
     "crew_id": null,
     "precision": "approximate",
     "source": "Wikipedia \"Return of Apollo 15 to Earth\"",
-    "sleep_quality_pct": 40
+    "sleep_quality_pct": 40,
+    "refs": [
+      "wiki_return15"
+    ],
+    "where": "",
+    "evidence": "secondary"
   },
   {
     "get_hours": 181.494,
@@ -224,7 +315,12 @@ window.AHM_DATA = {
     "detail": "The jettisoned Falcon ascent stage is deliberately crashed into the Moon, GET 181:29:37, registering on the seismometers left at the ALSEP site.",
     "crew_id": null,
     "precision": "exact",
-    "source": "Apollo 15 Mission Report (MSC-07230), Table 4-I"
+    "source": "Apollo 15 Mission Report (MSC-05161), Table 4-I",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Table 4-I",
+    "evidence": "primary"
   },
   {
     "get_hours": 223.8,
@@ -233,7 +329,12 @@ window.AHM_DATA = {
     "detail": "A propulsion burn departs lunar orbit and begins the trip home.",
     "crew_id": null,
     "precision": "approximate",
-    "source": "Wikipedia \"Apollo 15\" infobox (orbital departure timestamp, converted to GET)"
+    "source": "Wikipedia \"Apollo 15\" infobox (orbital departure timestamp, converted to GET)",
+    "refs": [
+      "wiki_a15"
+    ],
+    "where": "",
+    "evidence": "secondary"
   },
   {
     "get_hours": 241,
@@ -242,7 +343,12 @@ window.AHM_DATA = {
     "detail": "Alfred Worden leaves the Command Module to retrieve film cassettes from the SIM bay — the first deep-space EVA in history, roughly 320,000 km from Earth. Completed in about 18 minutes.",
     "crew_id": "CMP",
     "precision": "approximate",
-    "source": "NASA, Apollo 15 Mission Details"
+    "source": "NASA, Apollo 15 Mission Details",
+    "refs": [
+      "afj_worden"
+    ],
+    "where": "Day 11, part 2",
+    "evidence": "primary"
   },
   {
     "get_hours": 293,
@@ -251,7 +357,12 @@ window.AHM_DATA = {
     "detail": "Worden uses nose drops shortly before Earth entry to help prevent middle-ear blockage during descent.",
     "crew_id": "CMP",
     "precision": "approximate",
-    "source": "Apollo 15 Mission Report, Section 10.2.2 (Medications)"
+    "source": "Apollo 15 Mission Report, Section 10.2.2 (Medications)",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Section 10.2.2",
+    "evidence": "primary"
   },
   {
     "get_hours": 295.198,
@@ -260,7 +371,12 @@ window.AHM_DATA = {
     "detail": "Apollo 15 splashes down in the North Pacific, recovered by USS Okinawa. One of three main parachutes only partially inflated; the crew lands safely.",
     "crew_id": null,
     "precision": "exact",
-    "source": "Wikipedia \"Apollo 15\" infobox; NASA mission summary"
+    "source": "Wikipedia \"Apollo 15\" infobox; NASA mission summary",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Sections 1 and 10",
+    "evidence": "primary"
   },
   {
     "get_hours": 295.3,
@@ -269,16 +385,26 @@ window.AHM_DATA = {
     "detail": "A comprehensive physical exam shortly after landing found the crew in good health. Body weight losses: Scott 2.75 lb, Worden 3 lb, Irwin 5.5 lb. All three had minor skin irritation at biosensor sites, resolved without treatment within 48 hours.",
     "crew_id": null,
     "precision": "exact",
-    "source": "Apollo 15 Mission Report, Section 10.3 (Physical Examinations)"
+    "source": "Apollo 15 Mission Report, Section 10.3 (Physical Examinations)",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Section 10.3",
+    "evidence": "primary"
   },
   {
     "get_hours": 295.4,
     "category": "postflight",
     "title": "Bone mineral measurement (M-078 experiment)",
-    "detail": "Measured, not modeled: radius bone mineral content showed about a 4% loss attributable to weightlessness. The Commander regained baseline bone mineral faster than the Command Module Pilot; both were back to baseline within 2 weeks.",
+    "detail": "Measured before and after flight (experiment M-078) in the radius and the heel bone (os calcis). The report found essentially no change in the radius. The Commander regained his bone mineral more quickly than the Command Module Pilot, and the report links the Lunar Module Pilot's heel-bone change to results seen in bed-rest subjects.",
     "crew_id": null,
     "precision": "exact",
-    "source": "Apollo 15 Mission Report, Section 10.4 (Bone Mineral Measurement)"
+    "source": "Apollo 15 Mission Report, Section 10.4 (Bone Mineral Measurement)",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Section 10.4",
+    "evidence": "primary"
   },
   {
     "get_hours": 295.5,
@@ -287,7 +413,12 @@ window.AHM_DATA = {
     "detail": "Personal dosimeters read 360 millirad (Scott) and 510 millirad (Irwin) net integrated dose; passive dosimeters worn by all three crew averaged 300 millirad at skin depth — well below thresholds for detectable medical effect.",
     "crew_id": null,
     "precision": "exact",
-    "source": "Apollo 15 Mission Report, Section 10.2.4 (Radiation)"
+    "source": "Apollo 15 Mission Report, Section 10.2.4 (Radiation)",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Section 10.2.4",
+    "evidence": "primary"
   },
   {
     "get_hours": 295.6,
@@ -296,7 +427,12 @@ window.AHM_DATA = {
     "detail": "Post-flight bicycle-ergometer and lower-body-negative-pressure tests took about a week per crewman to return to preflight baseline — longer than on earlier missions. Both surface crewmen showed a cardiovascular response at higher heart-rate levels not seen on previous flights.",
     "crew_id": null,
     "precision": "exact",
-    "source": "Apollo 15 Mission Report, Section 10.3 (Physical Examinations)"
+    "source": "Apollo 15 Mission Report, Section 10.3 (Physical Examinations)",
+    "refs": [
+      "apollo15_mr"
+    ],
+    "where": "Section 10.3",
+    "evidence": "primary"
   }
 ],
   references: {
@@ -326,8 +462,8 @@ window.AHM_DATA = {
       "source": "Apollo 15 Mission Report, Section 10.2.4 (Radiation)"
     },
     "bone_mineral": {
-      "value": "Measured ~4% loss in radius bone mineral content, attributable to weightlessness; both crewmen back to baseline within 2 weeks postflight",
-      "note": "This is a real measured result from the M-078 experiment (pre/post-flight X-ray densitometry), not a continuous in-flight measurement or a model — Apollo 15 was 12.3 days, too short and not instrumented for in-flight bone-loss tracking the way long-duration ISS missions are.",
+      "value": "Radius: essentially no change. Heel bone (os calcis): the Commander regained mineral faster than the Command Module Pilot, and the Lunar Module Pilot's heel-bone change matched bed-rest results. No percentage loss is stated here because the figure used in an earlier version of this file could not be verified.",
+      "note": "Pre/post-flight photon-absorptiometry (experiment M-078), not a continuous in-flight measurement or a model. Apollo 15 lasted 12.3 days and was not instrumented for in-flight bone tracking.",
       "source": "Apollo 15 Mission Report, Section 10.4 (Bone Mineral Measurement)"
     },
     "exercise_countermeasures": {

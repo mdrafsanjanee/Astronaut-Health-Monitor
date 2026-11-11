@@ -1,6 +1,5 @@
 {
   "_readme": "Reference facts for the Apollo 15 simulator. Split into two groups: FLOWN_HARDWARE (what Apollo 15 actually used in 1971 — cited to the Apollo 15 Mission Report and contemporaneous NASA engineering documents) and MODERN_COMPARISON (today's ISS-era NASA-STD-3001 standards, shown only for contrast — they did not exist in 1971 and never governed this mission). An earlier version of this file applied modern ISS thresholds (cabin CO2/O2/pressure limits, a daily exercise-compliance regimen) directly to Apollo hardware; that was a mismatch and has been corrected here — see README 'Corrections' section.",
-
   "flown_hardware": {
     "cabin_atmosphere": {
       "value": "100% oxygen, nominal 5.0 psia (34.5 kPa); emergency floor 3.5 psia (24.1 kPa)",
@@ -26,8 +25,8 @@
       "source": "Apollo 15 Mission Report, Section 10.2.4 (Radiation)"
     },
     "bone_mineral": {
-      "value": "Measured ~4% loss in radius bone mineral content, attributable to weightlessness; both crewmen back to baseline within 2 weeks postflight",
-      "note": "This is a real measured result from the M-078 experiment (pre/post-flight X-ray densitometry), not a continuous in-flight measurement or a model — Apollo 15 was 12.3 days, too short and not instrumented for in-flight bone-loss tracking the way long-duration ISS missions are.",
+      "value": "Radius: essentially no change. Heel bone (os calcis): the Commander regained mineral faster than the Command Module Pilot, and the Lunar Module Pilot's heel-bone change matched bed-rest results. No percentage loss is stated here because the figure used in an earlier version of this file could not be verified.",
+      "note": "Pre/post-flight photon-absorptiometry (experiment M-078), not a continuous in-flight measurement or a model. Apollo 15 lasted 12.3 days and was not instrumented for in-flight bone tracking.",
       "source": "Apollo 15 Mission Report, Section 10.4 (Bone Mineral Measurement)"
     },
     "exercise_countermeasures": {
@@ -36,15 +35,24 @@
       "source": "General spaceflight-medicine literature (Ploutz-Snyder, NASA JSC ISS exercise Rx); absence for Apollo confirmed by the lack of any such program in the Apollo 15 Mission Report"
     }
   },
-
   "vitals_general_reference": {
-    "heart_rate_bpm": { "nominal": [50, 100], "note": "General clinical resting range, era-independent. EVA-period elevation above this range is expected exertion, not an alert — see 'eva_context' below." },
-    "respiration_rate": { "nominal": [12, 20], "note": "General clinical range, era-independent." },
+    "heart_rate_bpm": {
+      "nominal": [
+        50,
+        100
+      ],
+      "note": "General clinical resting range, era-independent. EVA-period elevation above this range is expected exertion, not an alert — see 'eva_context' below."
+    },
+    "respiration_rate": {
+      "nominal": [
+        12,
+        20
+      ],
+      "note": "General clinical range, era-independent."
+    },
     "source": "General clinical reference ranges, not mission- or era-specific."
   },
-
   "eva_context_rule": "A heart-rate or respiration reading during a logged EVA window is not flagged, however high, because elevated rate from physical exertion during a moonwalk is expected and healthy — the real 1971 concern was Irwin's EKG RHYTHM (paired beats with pauses), not his rate, which is why this app treats the cardiac arrhythmia as a distinct scripted medical event rather than something a simple rate threshold could have caught. A rate-only monitor would have missed exactly the thing that mattered — see README.",
-
   "modern_comparison": {
     "_readme": "For contrast only — none of the following governed Apollo 15. Included so the app can show how far astronaut health monitoring has moved on since 1971.",
     "cabin_atmosphere_iss": "NASA-STD-3001 Vol 2 [V2 6003, V2 6006]: ~14.2-14.9 psia total pressure, 145-155 mmHg O2 partial pressure, two-gas (N2/O2) mix.",
