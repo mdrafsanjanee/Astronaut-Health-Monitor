@@ -77,6 +77,28 @@ How an alert works (`assets/js/live.js`):
 
 Rules, alerts, notices, tiles, body map and Mission Control all update from that one call.
 
+## NASA space weather, radiation and signal delay (new)
+
+A **Space weather** card appears on the Astronaut page (Live vitals tab) and on Demo Mission Control. It has two parts:
+
+1. **Live space weather from NASA DONKI** (flares, solar energetic particle events, geomagnetic storms, coronal mass ejections from
+   the last 7 days). The level (quiet / watch / alert) and the shelter steps are this app's own rules, written in
+   `assets/js/space-weather.js`. An alert also colours the whole-body (radiation) region of the body map.
+2. **Mission environment**: pick space station, Moon, deep-space transit or Mars surface to see its radiation baseline and one-way
+   signal delay, plus NASA's career and solar-particle-event limits. Numbers live in `data/radiation-reference.json`
+   (then run `node tools/build-data.js`). ISS and lunar dose rates are left unset until you choose a NASA source.
+
+**Where to put your NASA API key:** open `assets/js/config.js` and paste it between the quotes on the line marked `KEY`
+(`NASA_API_KEY: ''`). Nothing else needs to change.
+
+- Key left empty: the app still works. It asks NASA with the shared `DEMO_KEY` (very few requests allowed).
+- NASA unreachable or key rejected: the card shows **SAMPLE** events (invented, `data/space-weather-sample.js`), clearly labelled.
+- Results are cached in the browser for 30 minutes (`DONKI_REFRESH_MIN` in `config.js`) to stay inside NASA's rate limits.
+- The key is visible to anyone who opens the page. Use a free NASA key only, and think before committing it to a public repository.
+
+The Apollo 15 replay does not use this card: DONKI only covers recent years, so 1971 has no space-weather record in it.
+The Open Science Data Repository (Inspiration4 human data) is cited on the References page as a future biomarker source; it is not loaded.
+
 ## Body map
 
 The body figure is drawn as inline SVG in `assets/js/shell.js` (`avatarCard`), with a plain-language entry per region in
@@ -109,6 +131,11 @@ The UI shows an APA in-text citation such as *(NASA, 1971, Section 10.2.3)* that
     assets/css/design.css the whole look: tokens at the top (colours, fonts, radius), then components
     data/events.json      27 cited events          data/telemetry.csv   per-hour heart rate / breathing
     data/sensor-feed.js   PLACEHOLDER live-vitals datasheet (3 s loop)
+    assets/js/config.js   settings + YOUR NASA API KEY (paste it here)
+    assets/js/space-weather.js  NASA DONKI loader, sample fallback, radiation watch/alert rules
+    assets/css/spaceweather.css the space-weather card
+    data/radiation-reference.json  radiation limits/baselines and signal delay by environment
+    data/space-weather-sample.js   invented offline sample events (labelled SAMPLE)
     assets/js/live.js     feed player, alert rules, notices, LIVE.push() hook
     data/references.js    APA references (hand-edited, no build)
     data/resources.js     challenge resources (hand-edited, no build)

@@ -32,7 +32,7 @@ window.AHM_REFS = {
     },
     ochmo_co2: {
       group: 'nasa',
-      apa: 'NASA Office of the Chief Health and Medical Officer. (2023). <i>Carbon dioxide (CO2)</i> (OCHMO-TB-004, Rev C) [Technical brief]. National Aeronautics and Space Administration. https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-004-carbon-dioxide.pdf',
+      apa: 'NASA Office of the Chief Health and Medical Officer. (2023a). <i>Carbon dioxide (CO2)</i> (OCHMO-TB-004, Rev C) [Technical brief]. National Aeronautics and Space Administration. https://www.nasa.gov/wp-content/uploads/2023/12/ochmo-tb-004-carbon-dioxide.pdf',
       note: 'Confirm the publication year of the brief.'
     },
     law2016: {
@@ -71,6 +71,26 @@ window.AHM_REFS = {
       apa: 'collectSPACE. (2014). <i>Apollo 15: Mission Control and Irwin\'s heart issues</i> [Online forum thread]. https://www.collectspace.com/ubb/Forum29/HTML/001552.html',
       note: 'Forum discussion; used only as a pointer to the flight directors\' accounts.'
     },
+    donki: {
+      group: 'nasa',
+      apa: 'NASA Community Coordinated Modeling Center. (n.d.). <i>Space Weather Database Of Notifications, Knowledge, Information (DONKI)</i> [Database]. National Aeronautics and Space Administration. https://ccmc.gsfc.nasa.gov/tools/DONKI/',
+      note: 'Read live through api.nasa.gov (flares, solar energetic particle events, geomagnetic storms, coronal mass ejections). Confirm endpoint names and key limits on the api.nasa.gov documentation before submission.'
+    },
+    ochmo_radiation: {
+      group: 'nasa',
+      apa: 'NASA Office of the Chief Health and Medical Officer. (2023b). <i>Radiation protection</i> [Technical brief]. National Aeronautics and Space Administration. https://www.nasa.gov/wp-content/uploads/2023/03/radiation-protection-technical-brief-ochmo.pdf',
+      note: 'Confirm the exact title and year on the PDF. Source of the 600 mSv career limit, the 250 mSv solar-particle-event limit and the shelter shielding figures.'
+    },
+    jpl_rad: {
+      group: 'nasa',
+      apa: 'Jet Propulsion Laboratory. (n.d.). <i>Data from NASA rover\'s voyage to Mars aids planning</i>. National Aeronautics and Space Administration. https://www.jpl.nasa.gov/news/data-from-nasa-rovers-voyage-to-mars-aids-planning/',
+      note: 'Curiosity RAD cruise average of 1.8 mSv/day. Add the publication year from the page. The measurement itself is from the Radiation Assessment Detector (RAD) on the Mars Science Laboratory.'
+    },
+    osdr: {
+      group: 'nasa',
+      apa: 'NASA Open Science Data Repository. (n.d.). <i>Open Science Data Repository</i> [Database]. National Aeronautics and Space Administration. https://osdr.nasa.gov/',
+      note: 'Holds the Inspiration4 human dataset (blood, skin biopsies, swabs). Not loaded into the app; listed as the source for a future biomarker layer.'
+    },
     challenge2026: {
       group: 'nasa',
       apa: 'NASA Space Apps Challenge. (2026). <i>Create health monitoring software for astronauts on space missions</i> [Challenge description]. National Aeronautics and Space Administration.',
@@ -85,7 +105,7 @@ window.AHM_REFS = {
     alsj_sun: 'Apollo Lunar Surface Journal, n.d.',
     afj_worden: 'Woods & O\'Brien, 2020',
     hrp_hazards: 'NASA, n.d.',
-    ochmo_co2: 'NASA OCHMO, 2023',
+    ochmo_co2: 'NASA OCHMO, 2023a',
     law2016: 'Law & Alexander, 2016',
     aha_hr: 'American Heart Association, n.d.-a',
     aha_bp: 'American Heart Association, n.d.-b',
@@ -94,6 +114,10 @@ window.AHM_REFS = {
     wiki_return15: 'Wikipedia contributors, n.d.-a',
     wiki_a15: 'Wikipedia contributors, n.d.-b',
     collectspace_thread: 'collectSPACE, 2014',
+    donki: 'NASA CCMC, n.d.',
+    ochmo_radiation: 'NASA OCHMO, 2023b',
+    jpl_rad: 'JPL, n.d.',
+    osdr: 'NASA OSDR, n.d.',
     challenge2026: 'NASA Space Apps Challenge, 2026'
   },
 
@@ -117,6 +141,11 @@ window.AHM_REFS = {
     { what: 'Resting heart-rate reference range', values: 'App band 50-100 bpm (the American Heart Association states 60-100 bpm; the lower edge allows for fit astronauts)', where: 'Heart-rate page', ref: 'aha_hr', used: 'Status score outside EVA windows' },
     { what: 'Blood-pressure categories for the live alert rules', values: 'Normal below 120/80; elevated; stage 1 from 130/80; stage 2 from 140/90; crisis above 180/120 mmHg', where: 'Blood pressure levels page', ref: 'aha_bp', used: 'Live vitals tiles and alerts' },
     { what: 'Body-temperature bands for the live alert rules', values: 'Normal 36.1-37.2 \u00B0C; fever from 38.0 \u00B0C', where: 'Body temperature norms article', ref: 'nlm_temp', used: 'Live vitals tiles and alerts' },
+    { what: 'Space weather events (live)', values: 'Solar flares, solar energetic particle events, geomagnetic storms and coronal mass ejections from the last 7 days. The watch/alert thresholds are this app\'s own rules.', where: 'DONKI via api.nasa.gov', ref: 'donki', used: 'Space-weather card (Astronaut and Mission Control pages) and the whole-body radiation region of the body map' },
+    { what: 'Radiation limits', values: 'Career limit 600 mSv; single solar particle event design limit under 250 mSv; storm-shelter shielding +10 cm (1-in-100 event) or +20 cm (1-in-1000 event) water-equivalent', where: 'Radiation protection technical brief', ref: 'ochmo_radiation', used: 'Mission environment card' },
+    { what: 'Deep-space radiation dose rate', values: 'Curiosity RAD cruise average about 1.8 mSv/day (about 3% from solar particles); surface environment about 0.5 mSv/day', where: 'JPL article; radiation technical brief', ref: 'jpl_rad', refs2: ['ochmo_radiation'], used: 'Mission environment card (transit and Mars surface)' },
+    { what: 'One-way signal delay to Earth', values: 'Moon about 1.3 s; Mars about 3 to 22 min. Calculated from distance divided by the speed of light, not quoted from a source.', where: 'data/radiation-reference.json', ref: 'jpl_rad', used: 'Mission environment card' },
+    { what: 'Human spaceflight biomedical data (not loaded)', values: 'Inspiration4 blood, skin and swab samples', where: 'NASA OSDR', ref: 'osdr', used: 'Not loaded into the app. Listed as the source for a future biomarker layer.' },
     { what: 'Cabin CO2 guidance (modern comparison only)', values: 'ISS limit 3 mmHg (1-hour average); symptoms reported from about 2.3 mmHg', where: 'Technical brief; operations update', ref: 'ochmo_co2', refs2: ['law2016'], used: 'Modern-monitoring comparison (not part of the Apollo replay)' }
   ],
 
@@ -128,6 +157,7 @@ window.AHM_REFS = {
     'Estimated values where no figure was reported, such as Worden\'s heart rate (tagged "estimated").',
     'Health score: computed from heart-rate and breathing bands plus active events (see assets/js/engine.js).',
     'Modern monitoring layer (blood pressure, oxygen saturation, skin temperature, sleep quality): simulated and labelled SIMULATED wherever shown.',
+    'Space-weather watch/alert levels and the shelter steps: rule-based text written for this prototype (assets/js/space-weather.js), not a NASA operational standard and not medical advice. When NASA cannot be reached the card shows INVENTED sample events (data/space-weather-sample.js), labelled SAMPLE.',
     'Wellbeing check-in: a demo input; Apollo crews did not fill in a daily survey.'
   ],
 
@@ -138,7 +168,9 @@ window.AHM_REFS = {
     'Chapter and page of NASA SP-368 that describes the in-flight heart-rhythm event (and replace the secondary sources).',
     'Source for the breathing-rate reference range (12-20 per minute) used by the engine.',
     'The "5 premature ventricular contractions in 30 seconds" count and the potassium-loss explanation from the earlier README (cited there to an arXiv paper that could not be verified). They were removed from the event text until a source is confirmed.',
-    'Source for the 1.3 s Earth-Moon signal delay and the roughly 22 minute Mars delay quoted in the decision-support banner.',
+    'The 1.3 s Earth-Moon and roughly 22 minute Mars signal delays are calculated (distance divided by the speed of light). Add a NASA source or JPL Horizons values if you want them quoted.',
+    'Check on api.nasa.gov that the DONKI endpoints used (FLR, SEP, GST, CME) and the key limits are as described, and confirm the radiation technical brief title and year, and that its 0.5 mSv/day surface figure refers to Mars.',
+    'ISS and lunar dose rates are not set in data/radiation-reference.json. Add them once the team picks a NASA source.',
     'Exact page title of the NASA hazards page and the publication year of the CO2 technical brief.'
   ]
 };

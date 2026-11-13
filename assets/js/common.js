@@ -30,7 +30,7 @@
    real EVA windows. This is more honest about what a 1971 bioharness
    could and couldn't catch — and it's a deliberate example for the
    README's note on why the production version needs real waveform
-   analysis, not just rate thresholds.
+   analysis, not just rate thresholds. yeap, this documentation was ai generated
    ========================================================================== */
 
 const AHM = (() => {
@@ -92,6 +92,7 @@ const AHM = (() => {
       events: window.AHM_DATA.events.slice().sort((a, b) => a.get_hours - b.get_hours),
       references: window.AHM_DATA.references,
       modern: window.AHM_DATA.modern,
+      radiation: window.AHM_DATA.radiation,
     };
   }
 

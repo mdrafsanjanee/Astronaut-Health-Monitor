@@ -5,7 +5,7 @@ const d = (f) => path.join(__dirname, '..', 'data', f);
 const json = (f) => JSON.stringify(JSON.parse(fs.readFileSync(d(f), 'utf8')), null, 2);
 const parts = [
   `telemetryCsv: ${JSON.stringify(fs.readFileSync(d('telemetry.csv'), 'utf8'))}`,
-  ...[['crew'], ['mission'], ['events'], ['references', 'nasa-references'], ['modern', 'modern-monitoring']]
+  ...[['crew'], ['mission'], ['events'], ['references', 'nasa-references'], ['modern', 'modern-monitoring'], ['radiation', 'radiation-reference']]
     .map(([k, f]) => `${k}: ${json((f || k) + '.json')}`),
 ];
 fs.writeFileSync(d('data.js'),

@@ -28,7 +28,7 @@
   const sim = { hour: 0, playing: false, timer: null, speed: 8 };   // 8 GET-hours per real second
   const TICK_MS = 200;
 
-  const state = { crew: 'LMP', organ: null, open: {}, tab: 'live', simTab: 'overview' };
+  const state = { crew: 'LMP', organ: null, open: {}, tab: 'live', simTab: 'overview', env: 'moon' };
   const reviewed = new Set();
 
   const NAV = [['home', 'Home'], ['astronaut', 'Astronaut'], ['control', 'Mission Control'], ['simulation', 'Apollo 15'], ['project', 'Project'], ['resources', 'Resources'], ['references', 'References']];
@@ -340,6 +340,10 @@
       ENGINE.DATA.events.filter((e) => /aspirin/i.test(e.title) && (!e.crew_id || e.crew_id === id) && hour >= e.get_hours && hour <= e.get_hours + 24).forEach((e) => flag('msk', 'watch', evText(e)));
       if (id === 'LMP' && hour >= 295.4) flag('msk', 'watch', `Heel-bone mineral change linked to bed-rest results <small>${cite(['apollo15_mr'], 'Section 10.4')}</small>`);
     } else {
+      if (window.SPACEWX) {
+        const w = SPACEWX.assess();
+        if (w.level !== 'ok') flag('rad', w.level, `${esc(w.title)}: ${esc(w.reasons.join('; '))} ${wxBadge()} <small>${cite(['donki'])}</small>`);
+      }
       LIVE.active(id).forEach((a) => {
         const k = a.metric === 'resp' ? 'lungs' : a.metric === 'temp' ? 'rad' : 'heart';
         flag(k, a.level, `${esc(a.title)}: ${esc(a.value)} <span class="ev ev-live">LIVE · placeholder feed</span> <small>${cite(a.cite)}</small>`);
@@ -528,6 +532,57 @@
     </div>`;
   }
 
+
+  /* ------------------------------------------------------------------ *
+   * Space weather (NASA DONKI) + mission environment card
+   * Data: assets/js/space-weather.js, data/radiation-reference.json. Key: assets/js/config.js
+   * ------------------------------------------------------------------ */
+
+  const WX_TONE = { ok: 'good', watch: 'warn', alert: 'danger' };
+
+  function wxBadge() {
+    if (!window.SPACEWX) return '';
+    const w = SPACEWX.state();
+    if (w.status === 'sample') return '<span class="ev ev-demo">SAMPLE · not real events</span>';
+    if (w.status === 'loading') return '<span class="ev ev-demo">LOADING</span>';
+    return `<span class="ev ev-live">LIVE · NASA DONKI · ${w.keyMode === 'own' ? 'your key' : 'shared DEMO_KEY'}</span>`;
+  }
+
+  function ago(ms) {
+    const h = (Date.now() - ms) / 3600000;
+    return h < 1 ? `${Math.max(1, Math.round(h * 60))} min ago` : h < 48 ? `${Math.round(h)} h ago` : `${Math.round(h / 24)} days ago`;
+  }
+
+  function spaceCard() {
+    if (!window.SPACEWX) return '';
+    const w = SPACEWX.state(), a = SPACEWX.assess();
+    const R = (ENGINE.DATA.radiation || { environments: [], limits: [] });
+    const env = R.environments.find((e) => e.id === state.env) || R.environments[0];
+    const events = w.events.slice(0, 5);
+    const updated = w.fetchedAt ? new Date(w.fetchedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    return `<section class="card sx-wx ${a.level}" aria-label="Space weather and mission environment">
+      <div class="sx-wx-head">
+        <div><span class="card-kicker">SPACE WEATHER · RADIATION HAZARD</span>${StatusPill(a.title, WX_TONE[a.level])}</div>
+        <div class="sx-wx-tools">${wxBadge()}<button class="btn secondary compact" data-act="wx-refresh" type="button">Refresh</button></div>
+      </div>
+      ${w.message ? `<p class="sx-note">${esc(w.message)}</p>` : ''}
+      ${a.level !== 'ok' ? `<p class="sx-wx-why"><strong>Why:</strong> ${a.reasons.map(esc).join('; ')}. <small>These thresholds are this app's own rules ${cite(['donki'])}.</small></p>
+        <span class="card-kicker">WHAT TO DO NOW</span><ol class="sx-steps">${a.steps.map((x) => `<li>${esc(x)}</li>`).join('')}</ol>` : `<p class="sx-allclear">${a.steps[0]} Last ${w.days} days from NASA: ${events.length ? `${w.events.length} event${w.events.length === 1 ? '' : 's'}, none above this app's watch level.` : 'no events reported.'}</p>`}
+      ${events.length ? `<ul class="sx-wx-list">${events.map((e) => `<li><b>${esc(e.title)}</b><span>${esc(e.detail || '')}</span><time>${ago(e.t)}</time></li>`).join('')}</ul>` : ''}
+      <small class="ev-cite">${updated ? `Updated ${updated} · ` : ''}refreshes every ${w.refreshMin} min · ${cite(['donki'])}</small>
+      <div class="sx-wx-env">
+        <span class="card-kicker">MISSION ENVIRONMENT · RADIATION BASELINE AND SIGNAL DELAY</span>
+        <div class="sx-chips" role="group" aria-label="Mission environment">${R.environments.map((e) => `<button class="sx-chip ${e.id === env.id ? 'active' : ''}" data-act="env" data-val="${e.id}" type="button" aria-pressed="${e.id === env.id}"><span>${esc(e.label)}</span></button>`).join('')}</div>
+        <dl class="sx-wx-facts">
+          <div><dt>Typical dose rate</dt><dd>${esc(env.doseText)}</dd><small>${esc(env.doseNote)} ${env.ref ? cite([env.ref]) : ''}</small></div>
+          <div><dt>Signal delay to Earth</dt><dd>${esc(env.delayText)}</dd><small>${esc(env.delayNote)}</small></div>
+          <div><dt>What it means for decisions</dt><dd>${esc(env.autonomy)}</dd></div>
+        </dl>
+        <ul class="sx-wx-limits">${R.limits.map((l) => `<li><b>${esc(l.label)}:</b> ${esc(l.value)} <small>${esc(l.note)} ${cite([l.ref])}</small></li>`).join('')}</ul>
+      </div>
+    </section>`;
+  }
+
   function feedHtml() {
     const smp = LIVE.latest(state.crew);
     if (!smp) return '';
@@ -568,7 +623,7 @@
     if (state.tab === 'body') return organDetail(c.shown, c.organs, 'demo');
     if (state.tab === 'checkin') return `<section id="checkin-body">${checkinBlock()}</section>`;
     const acts = checkinActions(recentCheckin(state.crew));
-    return `${feedHtml()}${acts.length ? insight('is-message', 'spark', 'SUGGESTED ACTION · FROM YOUR CHECK-IN', acts.map(esc).join('<br>')) : ''}`;
+    return `${feedHtml()}${spaceCard()}${acts.length ? insight('is-message', 'spark', 'SUGGESTED ACTION · FROM YOUR CHECK-IN', acts.map(esc).join('<br>')) : ''}`;
   }
 
   // Apollo 15 Simulation main column, by tab.
@@ -746,6 +801,8 @@
     const stamp = (t) => new Date(t).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     return `<h3 class="sx-h3">Crew status <small>placeholder live feed</small></h3>
       <div class="card sx-board">${ENGINE.CREW.map((c) => crewRowLive(c)).join('')}</div>
+      <h3 class="sx-h3">Space weather <small>NASA DONKI</small></h3>
+      ${spaceCard()}
       <h3 class="sx-h3">Live alerts</h3>
       ${liveAll.length ? liveAll.map((a) => liveAlertCard(a, true)).join('') : '<div class="empty">All quiet. No live alerts right now.<br><br><button class="btn secondary compact" data-act="skip-alert" type="button">Trigger a demo alert</button></div>'}
       <h3 class="sx-h3">Live heart rate by crew <small>last 30 readings, one every ${Math.round(LIVE.intervalMs / 1000)} s</small></h3>
@@ -1083,6 +1140,8 @@
       case 'tab': if (current === 'astronaut') state.tab = val; else state.simTab = val; refreshPane(); break;
       case 'open-crew': state.crew = val; state.organ = null; if (location.hash === '#astronaut') render(); else location.hash = '#astronaut'; break;
       case 'organ': selectOrgan(val); break;
+      case 'env': state.env = val; renderLive(); break;
+      case 'wx-refresh': SPACEWX.refresh(); toast('Asking NASA for the latest space weather'); break;
       case 'skip-alert': LIVE.skipToNextAlert(state.crew); toast('Jumped the placeholder feed to the next alert'); break;
       case 'live-ack': LIVE.ackAlert(el.dataset.id); toast('Acknowledged. Your crewmates can see you are on it.'); break;
       case 'notice-ack': LIVE.ackNotice(el.dataset.id); toast('Thanks. The sender can see you saw it.'); break;
@@ -1126,6 +1185,7 @@
   setInterval(() => { const c = document.getElementById('utc-clock'); if (c) c.textContent = utcNow(); }, 1000);
   window.addEventListener('hashchange', render);
   LIVE.onChange(renderLive);
+  if (window.SPACEWX) { SPACEWX.onChange(renderLive); SPACEWX.start(); }
   LIVE.start();
   render();
 })();

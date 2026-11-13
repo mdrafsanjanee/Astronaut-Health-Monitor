@@ -1,0 +1,72 @@
+{
+  "_readme": "Reference numbers for the 'Mission environment' card: radiation baselines and one-way signal delay for each place a crew might be. Every radiation figure is quoted from the source named next to it. Delay values are CALCULATED (distance divided by the speed of light), not quoted; JPL Horizons gives exact values for any date if you want them later.",
+  "limits": [
+    {
+      "key": "career",
+      "label": "Career effective-dose limit",
+      "value": "600 mSv",
+      "note": "Universal for all ages and sexes.",
+      "ref": "ochmo_radiation"
+    },
+    {
+      "key": "spe",
+      "label": "Single solar particle event design limit",
+      "value": "under 250 mSv",
+      "note": "Effective dose per design reference event.",
+      "ref": "ochmo_radiation"
+    },
+    {
+      "key": "shelter",
+      "label": "Storm-shelter shielding",
+      "value": "+10 cm water-equivalent (1-in-100 event); +20 cm (1-in-1000 event)",
+      "note": "Shielding cuts dose by about 50% on average for a solar particle event but only about 7% for galactic cosmic rays.",
+      "ref": "ochmo_radiation"
+    }
+  ],
+  "environments": [
+    {
+      "id": "iss",
+      "label": "Space station (low Earth orbit)",
+      "doseText": "Not set in this prototype",
+      "doseNote": "Add an ISS dose rate here once the team picks a NASA source for it.",
+      "delayText": "Under 1 second",
+      "delayNote": "Near-continuous contact with the ground.",
+      "delaySeconds": 0.02,
+      "autonomy": "Flight surgeons can advise live.",
+      "ref": null
+    },
+    {
+      "id": "moon",
+      "label": "Moon (orbit, Gateway or surface base)",
+      "doseText": "Not set in this prototype",
+      "doseNote": "Add a lunar dose rate here once the team picks a NASA source for it (Artemis data is a candidate).",
+      "delayText": "About 1.3 seconds one way",
+      "delayNote": "Calculated: average Earth-Moon distance 384,400 km divided by the speed of light.",
+      "delaySeconds": 1.28,
+      "autonomy": "A short back-and-forth with the ground is still possible.",
+      "ref": null
+    },
+    {
+      "id": "transit",
+      "label": "Deep-space transit to Mars",
+      "doseText": "About 1.8 mSv/day (Curiosity RAD cruise average)",
+      "doseNote": "Measured by the Radiation Assessment Detector inside Curiosity on the 2011-2012 trip to Mars; about 3% came from solar particles. NASA's brief uses 1.5 mSv/day as a transit planning example.",
+      "delayText": "About 3 to 22 minutes one way",
+      "delayNote": "Calculated from Earth-Mars distances of roughly 55 to 400 million km. Changes with the planets' positions.",
+      "delaySeconds": 1320,
+      "autonomy": "A question and answer can take up to about 44 minutes, so the crew has to decide alone.",
+      "ref": "jpl_rad"
+    },
+    {
+      "id": "mars",
+      "label": "Mars surface base",
+      "doseText": "About 0.5 mSv/day (surface environment)",
+      "doseNote": "Surface-environment figure in NASA's radiation technical brief. Confirm in the brief that it refers to Mars before submission.",
+      "delayText": "About 3 to 22 minutes one way",
+      "delayNote": "Calculated, as above.",
+      "delaySeconds": 1320,
+      "autonomy": "The crew has to decide alone for most events.",
+      "ref": "ochmo_radiation"
+    }
+  ]
+}

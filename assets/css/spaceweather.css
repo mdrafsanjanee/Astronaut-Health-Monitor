@@ -1,0 +1,138 @@
+/* spaceweather.css - the "Space weather + mission environment" card. Uses the tokens from design.css. */
+.sx-wx {
+    margin-bottom: 14px;
+    padding: 18px;
+}
+
+.sx-wx.watch {
+    border-left: 3px solid var(--warn);
+}
+
+.sx-wx.alert {
+    border-left: 3px solid var(--bad);
+}
+
+.sx-wx-head {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.sx-wx-head>div {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.sx-wx-why {
+    color: var(--body);
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0 0 10px;
+}
+
+.sx-wx-list {
+    border-top: 1px solid var(--line);
+    list-style: none;
+    margin: 12px 0 8px;
+    padding: 0;
+}
+
+.sx-wx-list li {
+    align-items: baseline;
+    border-bottom: 1px solid var(--line);
+    display: grid;
+    gap: 4px 14px;
+    grid-template-columns: minmax(150px, 1.2fr) 2fr auto;
+    padding: 8px 0;
+}
+
+.sx-wx-list b {
+    color: var(--text);
+    font-size: 13.5px;
+    font-weight: 500;
+}
+
+.sx-wx-list span {
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.sx-wx-list time {
+    color: var(--subtle);
+    font-family: var(--mono);
+    font-size: 11.5px;
+}
+
+.sx-wx-env {
+    border-top: 1px solid var(--line);
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+    padding-top: 14px;
+}
+
+.sx-wx-facts {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    margin: 0;
+}
+
+.sx-wx-facts>div {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    display: grid;
+    gap: 4px;
+    padding: 12px 14px;
+}
+
+.sx-wx-facts dt {
+    color: var(--accent-2);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+}
+
+.sx-wx-facts dd {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.sx-wx-facts small,
+.sx-wx-limits small {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.sx-wx-limits {
+    color: var(--body);
+    display: grid;
+    font-size: 13px;
+    gap: 6px;
+    line-height: 1.5;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.sx-wx-limits b {
+    color: var(--text);
+    font-weight: 500;
+}
+
+@media (max-width: 700px) {
+    .sx-wx-list li {
+        grid-template-columns: 1fr;
+    }
+}

@@ -75,7 +75,7 @@ const ENGINE = (() => {
     const out = [], tired = ci && ci.fatigue >= 4;
     if (s.assess.alerts.some((a) => /arrhythmia/i.test(a.title)))
       out.push(tired ? 'Rhythm irregularity + fatigue: begin a rest cycle, defer EVA and strenuous work, repeat ECG in 2 h.'
-                     : 'Rhythm irregularity: repeat ECG, limit exertion, review potassium/electrolyte intake.');
+        : 'Rhythm irregularity: repeat ECG, limit exertion, review potassium/electrolyte intake.');
     if (tired && s.modern.sleepQuality < 70) out.push('Fatigue + poor recent sleep: protect the next sleep period, defer non-critical tasks.');
     if (ci && ci.mood <= 2) out.push('Low mood reported: schedule a private call or crew debrief.');
     if (ci && ci.symptoms) out.push('Symptom logged: recheck vitals in 1 h; escalate if it persists or worsens.');
